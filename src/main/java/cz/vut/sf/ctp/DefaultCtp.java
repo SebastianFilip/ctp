@@ -1,34 +1,32 @@
 package cz.vut.sf.ctp;
 
-import java.util.Set;
 
-import cz.vut.sf.graph.StochasticWeightedEdge;
+import cz.vut.sf.graph.StochasticDirectedWeightedGraph;
 import cz.vut.sf.graph.Vertex;
 
 public class DefaultCtp {
 
-	private final Set<Vertex> V;
-	private final Set<StochasticWeightedEdge> E;
+	public StochasticDirectedWeightedGraph g;
 	public final Vertex s;
 	public final Vertex t;
 	public final int k;
 	
-	public Set<Vertex> getV() {
-		return V;
-	}
-
-	public Set<StochasticWeightedEdge> getE() {
-		return E;
-	}
-	
-	public DefaultCtp(Set<Vertex> v, Set<StochasticWeightedEdge> e, Vertex s,
+	public DefaultCtp(StochasticDirectedWeightedGraph sdwg, Vertex s,
 			Vertex t, int k) {
 		super();
-		this.V = v;
-		this.E = e;
+		this.g = sdwg;
 		this.s = s;
 		this.t = t;
 		this.k = k;
+	}
+	
+	public DefaultCtp(StochasticDirectedWeightedGraph sdwg, Vertex s,
+			Vertex t) {
+		super();
+		this.g = sdwg;
+		this.s = s;
+		this.t = t;
+		this.k = sdwg.getAllVertexes().size();
 	}
 
 }
