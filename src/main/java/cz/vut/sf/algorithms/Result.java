@@ -4,7 +4,8 @@ import cz.vut.sf.ctp.Agent;
 
 public class Result {
 	public double costPaid;
-	public String path;
+	public String msg;
+	public String pathTraversed;
 	
 	public Result(Agent a){
 		costPaid = a.getTotalCost();
@@ -12,13 +13,14 @@ public class Result {
 	
 	public Result(Agent a, String path){
 		costPaid = a.getTotalCost();
-		this.path = path;
+		this.msg = path;
+		pathTraversed = a.printTraversalHistory().toString();
 	}
 	@Override
 	public String toString() {
-		if(path==null){
+		if(msg==null){
 			return "Result [costPaid=" + costPaid + "]";
 		}
-		return "Result [costPaid=" + costPaid + "] by path:" + path;
+		return msg + " alg " + "[costPaid=" + costPaid  + "] through: " + pathTraversed ;
 	}
 }

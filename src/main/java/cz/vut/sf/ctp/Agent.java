@@ -1,5 +1,6 @@
 package cz.vut.sf.ctp;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -15,6 +16,7 @@ import cz.vut.sf.graph.Vertex;
 public class Agent {
 	private double totalCost;	
 	private Vertex currentVertex;
+	private List<Vertex> traversalHistory;
 	
 	public Vertex getCurrentVertex(){
 		return currentVertex;
@@ -23,6 +25,20 @@ public class Agent {
 	public double getTotalCost(){
 		return totalCost;
 	}
+	
+	public String printTraversalHistory(){
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		for(int i=0; i < traversalHistory.size(); i++){
+			sb.append(traversalHistory.get(i).toString());
+			if(i<traversalHistory.size()-1){
+				sb.append(", ");
+			}
+		}
+		sb.append("]");
+		return sb.toString();
+	}
+	
 	// iterates agent through path in a graph if blocked edge appears return false
 	// return true if there are no more vertexes to visit -> path is empty
 	public boolean traversePath(GraphPath<Vertex, StochasticWeightedEdge> path){
@@ -33,7 +49,7 @@ public class Agent {
 			if(e.getActualState() == State.BLOCKED){
 				return false;
 			}
-			currentVertex = path.getGraph().getEdgeTarget(e);
+			setCurrentVertex(path.getGraph().getEdgeTarget(e));
 			totalCost += path.getGraph().getEdgeWeight(e);
 		}
 		return true;
@@ -51,10 +67,15 @@ public class Agent {
 				return false;
 			}
 			senseAction((StochasticDirectedWeightedGraph)path.getGraph());
-			currentVertex = path.getGraph().getEdgeTarget(e);
+			setCurrentVertex(path.getGraph().getEdgeTarget(e));
 			totalCost += path.getGraph().getEdgeWeight(e);
 		}
 		return true;
+	}
+	
+	private void setCurrentVertex(Vertex newVertex){
+		currentVertex = newVertex;
+		traversalHistory.add(currentVertex);
 	}
 
 	private void validateInputForTraverse(GraphPath<Vertex, StochasticWeightedEdge> path,
@@ -72,6 +93,8 @@ public class Agent {
 	public Agent(Vertex initialVertex){
 		currentVertex = initialVertex;
 		totalCost = 0;
+		traversalHistory = new ArrayList<Vertex>();
+		traversalHistory.add(currentVertex);
 	}
 	
 	public void senseAction(StochasticDirectedWeightedGraph g){

@@ -22,7 +22,6 @@ public class GraphChecker{
 				break;
 			}
 			visitedVertexes.add(currentVtx);
-
 			Set<StochasticWeightedEdge> edgesOfCurrentVtx = g.edgesOf(currentVtx);
 			for(StochasticWeightedEdge edge : edgesOfCurrentVtx){
 				if(edge.getActualState()!=State.BLOCKED){
@@ -34,8 +33,6 @@ public class GraphChecker{
 					}
 				}
 			}
-		System.out.println(open.toString());
-		
 		}while(!open.empty());
 		System.out.println("is connected: "+result);
 		return result;

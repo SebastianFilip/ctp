@@ -14,16 +14,13 @@ public class RepositionAlgorithm implements DefaultCtpAlgorithm {
 		agent.senseAction(ctp.g);
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(ctp.g);
     	GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
-    	int counter = 0;
     	do {
-    		counter++;
-    		//return statement
-    		agent.traversePath(dsp.getPath(agent.getCurrentVertex(), ctp.g.getSourceVtx()));
+    		// return to source vertex (first run is zero cost)
+    		// returnig back by SP -> mby not the same path
+    		// -> mby discover new blocked edges 
+    		agent.traversePath(dsp.getPath(agent.getCurrentVertex(), ctp.s));
     		dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(ctp.g);
     		shortestPath = dsp.getPath(agent.getCurrentVertex(), ctp.t);
-    		if(counter > 3){
-    			counter = 3;
-    		}
     	}while (!agent.traversePathWithSensing(shortestPath));
 		return new Result(agent, "reposition");
 	}

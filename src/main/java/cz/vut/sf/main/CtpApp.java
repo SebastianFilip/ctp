@@ -1,5 +1,6 @@
 package cz.vut.sf.main;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -15,6 +16,7 @@ import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 import org.jgrapht.graph.SimpleGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
 
+import cz.vut.sf.algorithms.ComparisionAlgorithm;
 import cz.vut.sf.algorithms.GraphChecker;
 import cz.vut.sf.algorithms.GreedyAlgorithm;
 import cz.vut.sf.algorithms.RepositionAlgorithm;
@@ -30,38 +32,65 @@ public class CtpApp {
     static Graph<String, DefaultEdge> completeGraph;
 
     public static void main(String[] args){
-
+    	//Instantiate CTP
     	StochasticDirectedWeightedGraph g = new StochasticDirectedWeightedGraph(StochasticWeightedEdge.class, TestData.getData());
-    	StochasticDirectedWeightedGraph g2 = (StochasticDirectedWeightedGraph) g.clone();
     	Vertex s = g.getSourceVtx();
     	Vertex t = g.getTargetVtx();
-
-    	//GA
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
+    	System.out.println(g.toString());
     	if(!new GraphChecker().isGraphConnected(g)){
     		return;
     	}
-    	System.out.println(g.toString());
-    	GreedyAlgorithm ga = new GreedyAlgorithm();
-    	System.out.println("start");
-    	Result r = ga.solve(ctp, new Agent(ctp.s));
-    	System.out.println(r.toString());
+    	//Compute
+    	List<AlgNames> algorithmsToBeMade = new ArrayList<AlgNames>();
+    	algorithmsToBeMade.add(AlgNames.GA); algorithmsToBeMade.add(AlgNames.RA);
+    	algorithmsToBeMade.add(AlgNames.CA);
+    	List<Result> results = algorithmRunner(ctp, algorithmsToBeMade);
     	
-    	//RA
-    	DefaultCtp ctp2 = new DefaultCtp(g2, s, t);
-    	if(!new GraphChecker().isGraphConnected(g2)){
-    		return;
-    	}
-    	System.out.println(g2.toString());
-    	RepositionAlgorithm ra = new RepositionAlgorithm();
-    	System.out.println("start 2");
-    	r = ra.solve(ctp2, new Agent(ctp2.s));
-    	System.out.println(r.toString());
+    	//Print results
+    	printResult(results);
     	
-    	//SSP s->t
+    	//Optimal solution print s->t
     	DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(g);
     	GraphPath<Vertex, StochasticWeightedEdge> shortestPath = dsp.getPath(s, t);
     	System.out.println("SP cost: "+ shortestPath.getWeight() +" through: "+shortestPath.getVertexList().toString());
+    }
+    
+    private static void printResult(List<Result> results){
+    	for(Result result : results){
+    		System.out.println(result.toString());
+    	}
+    }
+    
+    private static enum AlgNames{
+    	GA,RA,CA;
+    }
+    
+    private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms){
+    	List<Result> results = new ArrayList<Result>();
+    	for(AlgNames algorithm : algorithms){
+    		//make clone of graph instance so for upcoming algorithms same instance is used
+    		StochasticDirectedWeightedGraph graphClone = (StochasticDirectedWeightedGraph) ctp.g.clone();
+    		Result r = null;
+    		switch (algorithm){
+	    		case GA:
+	    			GreedyAlgorithm ga = new GreedyAlgorithm();
+	    	    	r = ga.solve(ctp, new Agent(ctp.s));
+	    			break;
+	    		case RA:
+	    			RepositionAlgorithm ra = new RepositionAlgorithm();
+	    	    	r = ra.solve(ctp, new Agent(ctp.s));
+	    			break;
+	    		case CA:
+	    			ComparisionAlgorithm ca = new ComparisionAlgorithm();
+	    			r = ca.solve(ctp, new Agent(ctp.s));
+	    			break;
+	    		}
+    		//set graphClone to ctp
+    		ctp.g = graphClone;
+    		results.add(r);
+    	}
+    	return results;
     }
 
 	private static void completeGraphDemo() {
