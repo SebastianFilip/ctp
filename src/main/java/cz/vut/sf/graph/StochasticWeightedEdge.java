@@ -2,6 +2,7 @@ package cz.vut.sf.graph;
 
 import java.text.DecimalFormat;
 
+import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
 public class StochasticWeightedEdge extends DefaultWeightedEdge {
@@ -33,6 +34,10 @@ public class StochasticWeightedEdge extends DefaultWeightedEdge {
 	public void setProbability(double prob) {
 		this.probability = prob;
 		actualState = Math.random() <= this.probability ? State.BLOCKED : State.TRAVESABLE;
+	}
+	
+	public StochasticWeightedEdge getOppositeEdge(Graph<Vertex, StochasticWeightedEdge> graph){
+		return graph.getEdge((Vertex)this.getTarget(), (Vertex)this.getSource());
 	}
 	
 	@Override

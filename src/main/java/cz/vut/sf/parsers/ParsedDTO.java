@@ -8,6 +8,7 @@ public class ParsedDTO {
 	public List<List<Double>> weightsList;
 	public List<List<Double>> probabilitiesList;
 	public List<List<Double>> penaltyList;
+	public List<List<Double>> penalizationList;
 	
 	public boolean validateSize(){
 		int rows = adjacencyList.size();

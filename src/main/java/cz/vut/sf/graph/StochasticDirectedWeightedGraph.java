@@ -16,7 +16,11 @@ public class StochasticDirectedWeightedGraph extends
 	
 	//each vertex should have its own uniq id
 	private final Set<Vertex> allVertexes;
-	private double blockedEdgesRevealed = 0;
+	private int blockedEdgesRevealed = 0;
+	
+	public int getBlockedEdgesRevealed(){
+		return blockedEdgesRevealed;
+	}
 	
 	public StochasticDirectedWeightedGraph(Class<? extends StochasticWeightedEdge> edgeClass) {
 		super(edgeClass);
