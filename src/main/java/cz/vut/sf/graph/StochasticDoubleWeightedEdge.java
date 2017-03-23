@@ -9,6 +9,11 @@ public class StochasticDoubleWeightedEdge extends StochasticWeightedEdge {
 	// Value cost that is required to get rid of penalization
 	private double recoveryThresholdValue;
 	
+	public StochasticDoubleWeightedEdge(double p){
+		super();
+		setPenalization(p);
+	}
+	
 	public double getPenalization() {
 		return penalization;
 	}

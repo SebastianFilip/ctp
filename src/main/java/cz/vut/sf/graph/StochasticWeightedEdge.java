@@ -36,6 +36,18 @@ public class StochasticWeightedEdge extends DefaultWeightedEdge {
 		actualState = Math.random() <= this.probability ? State.BLOCKED : State.TRAVESABLE;
 	}
 	
+	public void reEvaluateState(Graph<Vertex, StochasticWeightedEdge> graph){
+		actualState = Math.random() <= this.probability ? State.BLOCKED : State.TRAVESABLE;
+		StochasticWeightedEdge oppositeEdge = getOppositeEdge(graph);
+		//this must be done to be sure no dead ends are in graph
+		//sadly this means different probabilities for opposite edges make no sense
+		//only one of them is used (the last one called)
+		if(!(oppositeEdge == null)){
+			oppositeEdge.actualState = this.getActualState();
+		}
+		
+	}
+	
 	public StochasticWeightedEdge getOppositeEdge(Graph<Vertex, StochasticWeightedEdge> graph){
 		return graph.getEdge((Vertex)this.getTarget(), (Vertex)this.getSource());
 	}
@@ -43,6 +55,17 @@ public class StochasticWeightedEdge extends DefaultWeightedEdge {
 	@Override
 	public String toString() {
 		//return "[w,p]=[" + this.getWeight() + ", " + df.format(probability).replace(',','.') +"]";
-		return actualState.name();
+		if(actualState == State.BLOCKED){
+			return "BLOCKED";
+		}
+		return "T";
 	}
+	
+	@Override
+	public Object clone(){
+		StochasticWeightedEdge clone;
+		clone = (StochasticWeightedEdge) super.clone();
+		return clone;
+	}
+	
 }

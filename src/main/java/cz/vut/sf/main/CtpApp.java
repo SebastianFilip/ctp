@@ -19,11 +19,14 @@ import org.jgrapht.traverse.DepthFirstIterator;
 import cz.vut.sf.algorithms.ComparisionAlgorithm;
 import cz.vut.sf.algorithms.GraphChecker;
 import cz.vut.sf.algorithms.GreedyAlgorithm;
+import cz.vut.sf.algorithms.Hop;
+import cz.vut.sf.algorithms.Oro;
 import cz.vut.sf.algorithms.RepositionAlgorithm;
 import cz.vut.sf.algorithms.Result;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
-import cz.vut.sf.graph.StochasticDirectedWeightedGraph;
+import cz.vut.sf.graph.EdgeConvertor;
+import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.Vertex;
 import cz.vut.sf.parsers.TestData;
@@ -33,64 +36,93 @@ public class CtpApp {
 
     public static void main(String[] args){
     	//Instantiate CTP
-    	StochasticDirectedWeightedGraph g = new StochasticDirectedWeightedGraph(StochasticWeightedEdge.class, TestData.getData());
+    	StochasticWeightedGraph g = new StochasticWeightedGraph(StochasticWeightedEdge.class, TestData.getData2());
     	Vertex s = g.getSourceVtx();
     	Vertex t = g.getTargetVtx();
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
     	System.out.println(g.toString());
     	if(!new GraphChecker().isGraphConnected(g)){
+    		System.out.println("is connected: false");
+    		g.removeAllBlockedEdges();
+    		System.out.println(g.toString());
     		return;
     	}
+    	
+    	//TEST RCTP
+    	
+    	
+    	
+    	//TEST RCTP
+    	
     	//Compute
     	List<AlgNames> algorithmsToBeMade = new ArrayList<AlgNames>();
+    	algorithmsToBeMade.add(AlgNames.HOP); algorithmsToBeMade.add(AlgNames.ORO);
     	algorithmsToBeMade.add(AlgNames.GA); algorithmsToBeMade.add(AlgNames.RA);
     	algorithmsToBeMade.add(AlgNames.CA);
     	List<Result> results = algorithmRunner(ctp, algorithmsToBeMade);
     	
     	//Print results
     	printResult(results);
-    	
     	//Optimal solution print s->t
-    	DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(g);
+    	ctp.g.removeAllBlockedEdges();
+    	DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(ctp.g);
     	GraphPath<Vertex, StochasticWeightedEdge> shortestPath = dsp.getPath(s, t);
     	System.out.println("SP cost: "+ shortestPath.getWeight() +" through: "+shortestPath.getVertexList().toString());
     }
     
     private static void printResult(List<Result> results){
+    	if(results==null)return;
     	for(Result result : results){
+    		if(result!=null){
     		System.out.println(result.toString());
+    		}
     	}
     }
     
     private static enum AlgNames{
-    	GA,RA,CA;
+    	GA,RA,CA,HOP, ORO;
     }
     
     private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms){
-    	List<Result> results = new ArrayList<Result>();
-    	for(AlgNames algorithm : algorithms){
-    		//make clone of graph instance so for upcoming algorithms same instance is used
-    		StochasticDirectedWeightedGraph graphClone = (StochasticDirectedWeightedGraph) ctp.g.clone();
-    		Result r = null;
-    		switch (algorithm){
-	    		case GA:
-	    			GreedyAlgorithm ga = new GreedyAlgorithm();
-	    	    	r = ga.solve(ctp, new Agent(ctp.s));
-	    			break;
-	    		case RA:
-	    			RepositionAlgorithm ra = new RepositionAlgorithm();
-	    	    	r = ra.solve(ctp, new Agent(ctp.s));
-	    			break;
-	    		case CA:
-	    			ComparisionAlgorithm ca = new ComparisionAlgorithm();
-	    			r = ca.solve(ctp, new Agent(ctp.s));
-	    			break;
-	    		}
-    		//set graphClone to ctp
-    		ctp.g = graphClone;
-    		results.add(r);
-    	}
-    	return results;
+    	try {
+			List<Result> results = new ArrayList<Result>();
+			for(AlgNames algorithm : algorithms){
+				//make clone of graph instance so for upcoming algorithms same instance is used
+				StochasticWeightedGraph graphClone = (StochasticWeightedGraph) ctp.g.clone();
+//				System.out.println(ctp.g.toString());
+				
+				Result r = null;
+				switch (algorithm){
+					case GA:
+						GreedyAlgorithm ga = new GreedyAlgorithm();
+				    	r = ga.solve(ctp, new Agent(ctp.s));
+						break;
+					case RA:
+						RepositionAlgorithm ra = new RepositionAlgorithm();
+				    	r = ra.solve(ctp, new Agent(ctp.s));
+						break;
+					case CA:
+						ComparisionAlgorithm ca = new ComparisionAlgorithm();
+						r = ca.solve(ctp, new Agent(ctp.s));
+						break;
+					case HOP:
+						Hop hop = new Hop();
+						r = hop.solve(ctp, new Agent(ctp.s));
+						break;
+					case ORO:
+						Oro oro = new Oro();
+						r = oro.solve(ctp, new Agent(ctp.s));
+						break;
+					}
+				//set graphClone to ctp
+				ctp.g = graphClone;
+				results.add(r);
+			}
+			return results;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
     }
 
 	private static void completeGraphDemo() {

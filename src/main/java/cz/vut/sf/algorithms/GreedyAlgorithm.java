@@ -6,23 +6,30 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedEdge;
+import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
 
 public class GreedyAlgorithm implements DefaultCtpAlgorithm {
 
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		agent.senseAction(ctp.g);
-    	traverseByGa(ctp, agent, false);
+    	traverseByGa(ctp.g, ctp.t, agent, false);
 		return new Result(agent, "greedy");
 	}
-	
-	public void traverseByGa(DefaultCtp ctp, Agent agent, boolean oneCycle){
+	/**
+	 * Traverse path with sensing by GA (if agent's current position was not sensed yet it may cause failures)
+	 * @param g - graph on which traverse will be done
+	 * @param t - termination Vertex
+	 * @param agent
+	 * @param oneCycle - if true method will be terminated after blocked edge on chosen SPP is revealed
+	 */
+	public static void traverseByGa(StochasticWeightedGraph g, Vertex t, Agent agent, boolean oneCycle){
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
 		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
 		boolean travelFinished;
     	do {
-    		dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(ctp.g);
-    		shortestPath = dsp.getPath(agent.getCurrentVertex(), ctp.t);
+    		dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(g);
+    		shortestPath = dsp.getPath(agent.getCurrentVertex(), t);
     		travelFinished = agent.traversePathWithSensing(shortestPath);
     	}while (!(travelFinished || oneCycle));
 	}

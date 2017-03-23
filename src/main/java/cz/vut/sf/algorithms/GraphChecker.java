@@ -3,13 +3,13 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 
-import cz.vut.sf.graph.StochasticDirectedWeightedGraph;
+import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedEdge.State;
 import cz.vut.sf.graph.Vertex;
 
 public class GraphChecker{
-	public boolean isGraphConnected(StochasticDirectedWeightedGraph g){
+	public boolean isGraphConnected(StochasticWeightedGraph g){
 		Set<Vertex> visitedVertexes = new HashSet<Vertex>();
 		
 		Stack <Vertex> open = new Stack<Vertex>();
@@ -34,7 +34,7 @@ public class GraphChecker{
 				}
 			}
 		}while(!open.empty());
-		System.out.println("is connected: "+result);
+//		System.out.println("is connected: "+result);
 		return result;
 	}
 }

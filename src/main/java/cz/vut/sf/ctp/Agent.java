@@ -2,7 +2,6 @@ package cz.vut.sf.ctp;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -10,7 +9,7 @@ import org.jgrapht.GraphPath;
 import org.jgrapht.WeightedGraph;
 
 import cz.vut.sf.graph.CtpException;
-import cz.vut.sf.graph.StochasticDirectedWeightedGraph;
+import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.StochasticDoubleWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedEdge.State;
@@ -29,6 +28,10 @@ public class Agent {
 	
 	public double getTotalCost(){
 		return totalCost;
+	}
+	
+	public List<Vertex> getTraversalHistory(){
+		return traversalHistory;
 	}
 	
 	public String printTraversalHistory(){
@@ -67,7 +70,7 @@ public class Agent {
 		validateInputForTraverse(path, pathEdges);
 		
 		for (StochasticWeightedEdge e : pathEdges){
-			senseAction((StochasticDirectedWeightedGraph)path.getGraph());
+			senseAction((StochasticWeightedGraph)path.getGraph());
 			if(e.beliefState == State.BLOCKED){
 				return false;
 			}
@@ -101,7 +104,15 @@ public class Agent {
 		penalizedEdges = new HashSet<StochasticDoubleWeightedEdge>();
 	}
 	
-	public void senseAction(StochasticDirectedWeightedGraph g){
+	public Agent(Agent source){
+		this.currentVertex = new Vertex(source.currentVertex);
+		this.penalizedEdges = new HashSet<StochasticDoubleWeightedEdge>(source.penalizedEdges);
+		this.traversalHistory = new ArrayList<Vertex>(source.traversalHistory);
+		this.totalCost = source.totalCost;
+		this.penalizedEdges = new HashSet<StochasticDoubleWeightedEdge>(source.penalizedEdges);
+	}
+	
+	public void senseAction(StochasticWeightedGraph g){
 		Set<StochasticWeightedEdge> adjacentEdges = g.edgesOf(currentVertex);
 		for (StochasticWeightedEdge edge : adjacentEdges){
 			edge.beliefState = edge.getActualState();
@@ -110,7 +121,19 @@ public class Agent {
 			}
 		}
 	}
-	
+
+	public void traverseToAdjancetVtx(StochasticWeightedGraph g,
+			Vertex target) {
+		StochasticWeightedEdge chosenEdge = g.getEdge(this.currentVertex, target);
+		if(chosenEdge == null){
+			throw new CtpException("Specified vtx: " + target + " is not adjancent to cur_ctx: " + this.currentVertex);
+		}
+		if(chosenEdge.beliefState == State.UNKNOWN){
+			throw new CtpException("Agent's method 'traverseToAdjancetVtx' called for edge which belief state: UNKNOWN");
+		}
+		setCurrentVertex(target);
+		this.totalCost += g.getEdgeWeight(chosenEdge);
+	}
 	//-----------methods for recoverable graph-----------
 	
 	// iterates agent through path in a graph if blocked edge appears return false
@@ -120,7 +143,7 @@ public class Agent {
 		validateInputForRecTraverse(path, pathEdges);
 			
 		for (StochasticWeightedEdge e : pathEdges){
-			senseAction((StochasticDirectedWeightedGraph)path.getGraph());
+			senseAction((StochasticWeightedGraph)path.getGraph());
 			if(e.getActualState() == State.BLOCKED){
 				StochasticWeightedEdge oppositeDirEdge = e.getOppositeEdge(path.getGraph());
 				WeightedGraph<Vertex, StochasticWeightedEdge> g = (WeightedGraph<Vertex, StochasticWeightedEdge>)path.getGraph();
@@ -139,7 +162,7 @@ public class Agent {
 		return true;
 	}
 	
-	public void tryRecoverPenalizedEdges(StochasticDirectedWeightedGraph g){
+	public void tryRecoverPenalizedEdges(StochasticWeightedGraph g){
 		for (StochasticDoubleWeightedEdge e :penalizedEdges){
 			//recover will be successful for edges blocked for penalization cost 
 			e.recoverWeight(g, totalCost);
