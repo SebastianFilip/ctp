@@ -50,7 +50,7 @@ public class StochasticWeightedGraph extends
 		return null;
 	}
 	
-	public Vertex getTargetVtx(){
+	public Vertex getTerminalVtx(){
 		for(Vertex s: allVertexes){
 			if (s.getById(allVertexes.size()) != null){
 				return s;
@@ -181,7 +181,6 @@ public class StochasticWeightedGraph extends
 	public Object clone(){
 		StochasticWeightedGraph clone;
 		clone = (StochasticWeightedGraph) super.clone();
-		Set<StochasticWeightedEdge> edgesToRemove = new HashSet<StochasticWeightedEdge>();
 		Set<StochasticWeightedEdge> edgesOfThisInstance = this.edgeSet();
 		clone.removeAllEdges(edgesOfThisInstance);
 		for (Iterator<StochasticWeightedEdge> iterator = edgesOfThisInstance.iterator(); iterator.hasNext();) {

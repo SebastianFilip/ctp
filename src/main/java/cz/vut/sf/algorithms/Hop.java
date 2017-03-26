@@ -1,6 +1,7 @@
 package cz.vut.sf.algorithms;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -9,6 +10,7 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
+import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
@@ -22,67 +24,35 @@ import cz.vut.sf.graph.Vertex;
  * mean value will be chosen
  */
 public class Hop implements DefaultCtpAlgorithm {
-static int currentRollout = 0;	
+	
 public int totalRollouts = 100;
+private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>(); 
+
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
-		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
 		Vertex chosenVtx = null;
 		int blockedEdgesRevealed = 0;
-		boolean isGraphChanged = false;
     	try {
 			do {
-				currentRollout = 0;	
 				// removes blocked edges adjacent to agent's current position
 				agent.senseAction(ctp.g);
+				
 				if(blockedEdgesRevealed!=ctp.g.getBlockedEdgesRevealed()){
 					blockedEdgesRevealed = ctp.g.getBlockedEdgesRevealed();
-					isGraphChanged = true;
-				}else{
-					isGraphChanged = false;
-				}
-				// init fields
-				Set<Vertex> adjVertexes = StochasticWeightedGraph.getAdjacentVertexes(agent.getCurrentVertex(), ctp.g);
-				List<Simulator> simulators = new ArrayList<Simulator>();
-				for (Vertex vtx : adjVertexes) {
-					simulators.add(new Simulator(agent.getCurrentVertex(), vtx, ctp));
+					expandedHistory = new HashSet<ExpandedVtx>();
 				}
 				
+				Set<Vertex> adjVertexes = StochasticWeightedGraph.getAdjacentVertexes(agent.getCurrentVertex(), ctp.g);
+				List<Simulator> simulators = new ArrayList<Simulator>();
+				
+//				System.out.println(agent.getTraversalHistory());
+//				System.out.println("visited size: "+ expandedHistory.size());
+				
+				initSimulators(ctp, agent, adjVertexes, simulators);
+				
 				if(!(simulators.size() == 1)){
-			    	do{
-			    		currentRollout ++;
-			    		StochasticWeightedGraph rolloutedGraph = ctp.g.doRollout();
-			    		rolloutedGraph.removeAllBlockedEdges();
-			    		dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
-				    	for(int i = 0; i < simulators.size(); i++){
-				    		// I want my simulate agent to be always in same position and 
-				    		// I am using him only for creating traveling agent
-				    		Agent travellingAgent = new Agent(simulators.get(i).agent);
-				    		shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTargetVtx());
-				    		if(shortestPath == null){
-				    			System.out.println(new GraphChecker().isGraphConnected(rolloutedGraph));
-				    		}
-				    		double costOfEdgeToChosenVtx = simulators.get(i).agent.getTotalCost();
-				    		simulators.get(i).totalCost += shortestPath.getWeight() + costOfEdgeToChosenVtx;
-				    		simulators.get(i).totalIterations ++;
-//				    		System.out.println("average cost for Vtx [" + simulators.get(i).startingVtx 
-//				    				+"] is : "+ simulators.get(i).totalCost/simulators.get(i).totalIterations);
-				    	}
-			    	}while(currentRollout < totalRollouts);
-			    	chosenVtx = getBestAction(simulators);
-			    	//tyto podmínky jsou zavedeny protoze dochazelo k nekonecnym cyklum v subotimpu x->y->x->y->x
-			    	//kdyby to dochazelo mezi tremi neni vyreseno todo x->y->x->z->x->y->x->z...
-					if(!isGraphChanged){
-						int traversalHistorySize = agent.getTraversalHistory().size();
-						if(traversalHistorySize >= 3){
-							//predposledni vtx je stejny?
-							if(agent.getTraversalHistory().get(traversalHistorySize-2).equals(chosenVtx)){
-								int best = getBestActionIndex(simulators);
-								simulators.get(best).totalCost = Double.MAX_VALUE;
-								chosenVtx = simulators.get(0).agent.getCurrentVertex();
-							}
-						}
-					}
+			    	simulateTravelsals(ctp, simulators);
+			    	
+			    	chosenVtx = getBestAction(agent, simulators);		
 				}else{
 					// there is only one possible way so go through it
 					chosenVtx = simulators.get(0).agent.getCurrentVertex();
@@ -95,45 +65,93 @@ public int totalRollouts = 100;
 		return new Result(agent, "HOP");
 	}
 
-	private Vertex getBestAction(List<Simulator> simulators) {
-		Vertex result = null;
-		double expectedMinCost = Double.MAX_VALUE;
-		for(int i = 0; i < simulators.size(); i++){
-//	    	System.out.println("average cost for Vtx [" + simulators.get(i).startingVtx 
-//					+"] is : "+ simulators.get(i).totalCost/simulators.get(i).totalIterations);
-	    	
-			double averageCost = simulators.get(i).totalCost/simulators.get(i).totalIterations;
-			if(averageCost < expectedMinCost){
-				expectedMinCost = averageCost;
-				result = simulators.get(i).startingVtx;
-			}
+	private Vertex getBestAction(Agent agent, List<Simulator> simulators) {
+		Vertex chosenVtx;
+		int best = Simulator.getBestActionIndex(simulators);
+		chosenVtx = simulators.get(best).startingVtx;
+		simulators.get(best).agent = null;
+		ExpandedVtx expandedVtx = getPreviouslyVisitedVtx(agent.getCurrentVertex());
+		
+		if(expandedVtx != null){
+			expandedVtx.setData(simulators, best);
+		}else{
+			expandedVtx = new ExpandedVtx(agent.getCurrentVertex());
+			expandedVtx.setData(simulators, best);
+			expandedHistory.add(expandedVtx);
 		}
-		return result;
+		return chosenVtx;
 	}
 	
-	private int getBestActionIndex(List<Simulator> simulators) {
-		int result = 0;
-		double expectedMinCost = Double.MAX_VALUE;
-		for(int i = 0; i < simulators.size(); i++){	    	
-			double averageCost = simulators.get(i).totalCost/simulators.get(i).totalIterations;
-			if(averageCost < expectedMinCost){
-				expectedMinCost = averageCost;
-				result = i;
+	private void initSimulators(DefaultCtp ctp, Agent agent,
+			Set<Vertex> adjVertexes, List<Simulator> simulators) {
+		for (Vertex vtx : adjVertexes) {
+			Simulator temp = new Simulator(agent.getCurrentVertex(), vtx, ctp.g);
+			ExpandedVtx exVtx = getPreviouslyVisitedVtx(vtx);
+			if(exVtx != null){
+				temp.totalCost += exVtx.totalExpectedCost;
+				temp.totalIterations += exVtx.totalIterationsMade;
+			}
+			simulators.add(temp);
+		}
+	}
+
+	private void simulateTravelsals(DefaultCtp ctp, List<Simulator> simulators) {
+		int currentRollout = 0;	
+		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
+		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
+		do{
+			currentRollout ++;
+			StochasticWeightedGraph rolloutedGraph = ctp.g.doRollout();
+			rolloutedGraph.removeAllBlockedEdges();
+			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
+			for(int i = 0; i < simulators.size(); i++){
+				// I want my simulate agent to be always in same position and 
+				// I am using him only for creating traveling agent
+				Agent travellingAgent = new Agent(simulators.get(i).agent);
+				shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());
+				if(shortestPath == null){
+					System.out.println(new GraphChecker().isGraphConnected(rolloutedGraph));
+				}
+				double costOfEdgeToChosenVtx = simulators.get(i).agent.getTotalCost();
+				simulators.get(i).totalCost += shortestPath.getWeight() + costOfEdgeToChosenVtx;
+				simulators.get(i).totalIterations ++;
+			}
+		}while(currentRollout < totalRollouts);
+	}
+
+	private ExpandedVtx getPreviouslyVisitedVtx(Vertex current) {
+		for(ExpandedVtx vtx:expandedHistory){
+			if(vtx.expandedVtx == current){
+				return vtx;
 			}
 		}
-		return result;
+		return null;
 	}
 	
-	//holds copies of agent and moves them towards to specified vtx
-	public class Simulator{
-		public final Agent agent;
-		public final Vertex startingVtx;
-		public double totalCost = 0;
-		public int totalIterations = 0;
-		public Simulator(Vertex currentVtx, Vertex startingVtx, DefaultCtp ctp){
-			this.agent = new Agent(currentVtx);
-			this.startingVtx = startingVtx;
-			this.agent.traverseToAdjancetVtx(ctp.g, this.startingVtx);
+	private class ExpandedVtx{
+		public double totalExpectedCost = 0;
+		public int totalIterationsMade = 0;
+		public final Vertex expandedVtx;
+		public ExpandedVtx(Vertex expanded){
+			expandedVtx = expanded;
+		}
+		
+		@Override
+		public int hashCode() {
+			return expandedVtx.hashCode();
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			return expandedVtx.equals(obj);
+		}
+		
+		public void setData(List<Simulator> sims, int chosenOne){
+			for(int i = 0; i < sims.size(); i++){
+				if(i == chosenOne){continue;}
+				this.totalExpectedCost += sims.get(i).totalCost;
+				this.totalIterationsMade += sims.get(i).totalIterations;
+			}
 		}
 	}
 }

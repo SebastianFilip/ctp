@@ -25,6 +25,17 @@ public class Agent {
 	public Vertex getCurrentVertex(){
 		return currentVertex;
 	}
+	/**
+	 * 
+	 * @return previously visited vertex, null if isGraphChanged == true
+	 * null is also returned if there is no previous vertex visited
+	 */
+	public Vertex getPreviousVertex(boolean isGraphChanged){
+		if(isGraphChanged)return null;
+		int index = traversalHistory.size()-2;
+		if(index < 0)return null;
+		return traversalHistory.get(index);
+	}
 	
 	public double getTotalCost(){
 		return totalCost;

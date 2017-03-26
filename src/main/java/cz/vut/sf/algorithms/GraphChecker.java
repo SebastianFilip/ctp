@@ -17,7 +17,7 @@ public class GraphChecker{
 		boolean result = false;
 		do{
 			Vertex currentVtx = open.pop();
-			if(currentVtx.equals(g.getTargetVtx())){
+			if(currentVtx.equals(g.getTerminalVtx())){
 				result = true;
 				break;
 			}

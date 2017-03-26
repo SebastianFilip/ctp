@@ -212,14 +212,14 @@ public class TestData {
     	weightsList.add(w7);weightsList.add(w8);
 	}
 	private static void fillProbabilityList2(List<List<Double>> probabilitiesList) {
-		List<Double> p1 = new ArrayList<Double>(); p1.add(0d); p1.add(0d); p1.add(0d);
-    	List<Double> p2 = new ArrayList<Double>(); p2.add(0d); p2.add(0d); p2.add(0d);
-    	List<Double> p3 = new ArrayList<Double>(); p3.add(0d); p3.add(1d);
-    	List<Double> p4 = new ArrayList<Double>(); p4.add(0d); p4.add(0d); p4.add(0d); p4.add(0d);
-    	List<Double> p5 = new ArrayList<Double>(); p5.add(0d); p5.add(0.5d);
-    	List<Double> p6 = new ArrayList<Double>(); p6.add(0d); p6.add(0.5d);
-    	List<Double> p7 = new ArrayList<Double>(); p7.add(0d); p7.add(0.5d);
-    	List<Double> p8 = new ArrayList<Double>(); p8.add(0d); p8.add(0d); p8.add(1d);p8.add(0.5d); p8.add(0.5d); p8.add(0.5d);
+		List<Double> p1 = new ArrayList<Double>(); p1.add(-1d); p1.add(-1d); p1.add(-1d);
+    	List<Double> p2 = new ArrayList<Double>(); p2.add(-1d); p2.add(-1d); p2.add(-1d);
+    	List<Double> p3 = new ArrayList<Double>(); p3.add(-1d); p3.add(1d);
+    	List<Double> p4 = new ArrayList<Double>(); p4.add(-1d); p4.add(-1d); p4.add(-1d); p4.add(-1d);
+    	List<Double> p5 = new ArrayList<Double>(); p5.add(-1d); p5.add(0.5d);
+    	List<Double> p6 = new ArrayList<Double>(); p6.add(-1d); p6.add(0.5d);
+    	List<Double> p7 = new ArrayList<Double>(); p7.add(-1d); p7.add(0.5d);
+    	List<Double> p8 = new ArrayList<Double>(); p8.add(-1d); p8.add(-1d); p8.add(1d);p8.add(0.5d); p8.add(0.5d); p8.add(0.5d);
     	probabilitiesList.add(p1);probabilitiesList.add(p2);probabilitiesList.add(p3);
     	probabilitiesList.add(p4);probabilitiesList.add(p5);probabilitiesList.add(p6);
     	probabilitiesList.add(p7);probabilitiesList.add(p8);

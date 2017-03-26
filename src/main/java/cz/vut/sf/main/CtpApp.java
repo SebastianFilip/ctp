@@ -23,6 +23,7 @@ import cz.vut.sf.algorithms.Hop;
 import cz.vut.sf.algorithms.Oro;
 import cz.vut.sf.algorithms.RepositionAlgorithm;
 import cz.vut.sf.algorithms.Result;
+import cz.vut.sf.algorithms.Uctb;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.EdgeConvertor;
@@ -38,7 +39,7 @@ public class CtpApp {
     	//Instantiate CTP
     	StochasticWeightedGraph g = new StochasticWeightedGraph(StochasticWeightedEdge.class, TestData.getData2());
     	Vertex s = g.getSourceVtx();
-    	Vertex t = g.getTargetVtx();
+    	Vertex t = g.getTerminalVtx();
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
     	System.out.println(g.toString());
     	if(!new GraphChecker().isGraphConnected(g)){
@@ -56,6 +57,7 @@ public class CtpApp {
     	
     	//Compute
     	List<AlgNames> algorithmsToBeMade = new ArrayList<AlgNames>();
+    	algorithmsToBeMade.add(AlgNames.UCTB);
     	algorithmsToBeMade.add(AlgNames.HOP); algorithmsToBeMade.add(AlgNames.ORO);
     	algorithmsToBeMade.add(AlgNames.GA); algorithmsToBeMade.add(AlgNames.RA);
     	algorithmsToBeMade.add(AlgNames.CA);
@@ -80,7 +82,7 @@ public class CtpApp {
     }
     
     private static enum AlgNames{
-    	GA,RA,CA,HOP, ORO;
+    	GA,RA,CA,HOP,ORO,UCTB;
     }
     
     private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms){
@@ -113,6 +115,9 @@ public class CtpApp {
 						Oro oro = new Oro();
 						r = oro.solve(ctp, new Agent(ctp.s));
 						break;
+					case UCTB:
+						Uctb uctb = new Uctb();
+						r = uctb.solve(ctp, new Agent(ctp.s));
 					}
 				//set graphClone to ctp
 				ctp.g = graphClone;

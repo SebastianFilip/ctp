@@ -33,4 +33,20 @@ public class GreedyAlgorithm implements DefaultCtpAlgorithm {
     		travelFinished = agent.traversePathWithSensing(shortestPath);
     	}while (!(travelFinished || oneCycle));
 	}
+	
+	public static boolean traverseByGa(StochasticWeightedGraph g, Vertex t, Agent agent){
+		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
+		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
+		boolean travelFinished;
+    	do {
+    		dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(g);
+    		shortestPath = dsp.getPath(agent.getCurrentVertex(), t);
+    		if(shortestPath == null){
+    			//graph is not connected to the desired target t
+    			return false;
+    		}
+    		travelFinished = agent.traversePathWithSensing(shortestPath);
+    	}while (!(travelFinished));
+		return true;
+	}
 }
