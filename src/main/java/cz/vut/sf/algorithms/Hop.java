@@ -23,12 +23,17 @@ import cz.vut.sf.graph.Vertex;
  * then it solves SPP, action with the lowest expected
  * mean value will be chosen
  */
-public class Hop implements DefaultCtpAlgorithm {
+public class Hop extends LoggerClass implements DefaultCtpAlgorithm {
 	
-public int totalRollouts = 100;
+public int totalRollouts = 5000;
+// expandedHistory Set bias HOP to do more exploring by "remembering" previously visited vtxs
+// and setting its estimated cost for all other vertexes but chosen one. This is done till new blockage 
+// is explored, then Set is nulled.
+// TODO think if only last visit estimation should be used than all of the previous visits cost estimations
 private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>(); 
 
 	public Result solve(DefaultCtp ctp, Agent agent) {
+		LOG.debug("Starting HOP, total rollouts = " + totalRollouts);
 		Vertex chosenVtx = null;
 		int blockedEdgesRevealed = 0;
     	try {
@@ -44,19 +49,19 @@ private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>();
 				Set<Vertex> adjVertexes = StochasticWeightedGraph.getAdjacentVertexes(agent.getCurrentVertex(), ctp.g);
 				List<Simulator> simulators = new ArrayList<Simulator>();
 				
-//				System.out.println(agent.getTraversalHistory());
-//				System.out.println("visited size: "+ expandedHistory.size());
-				
 				initSimulators(ctp, agent, adjVertexes, simulators);
 				
 				if(!(simulators.size() == 1)){
 			    	simulateTravelsals(ctp, simulators);
-			    	
-			    	chosenVtx = getBestAction(agent, simulators);		
+			    	int best = Simulator.getBestActionIndex(simulators);
+			    	chosenVtx = simulators.get(best).startingVtx;
+			    	actualizeExpandedHistory(best, simulators, agent);
+//			    	chosenVtx = getBestAction(agent, simulators);		
 				}else{
 					// there is only one possible way so go through it
 					chosenVtx = simulators.get(0).agent.getCurrentVertex();
 				}
+				LOG.debug("Chosen vtx = " + chosenVtx);
 				agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			}while (!(agent.getCurrentVertex().equals(ctp.t)));
 		} catch (Exception e) {
@@ -65,11 +70,7 @@ private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>();
 		return new Result(agent, "HOP");
 	}
 
-	private Vertex getBestAction(Agent agent, List<Simulator> simulators) {
-		Vertex chosenVtx;
-		int best = Simulator.getBestActionIndex(simulators);
-		chosenVtx = simulators.get(best).startingVtx;
-		simulators.get(best).agent = null;
+	private void actualizeExpandedHistory(int best, List<Simulator> simulators, Agent agent) {
 		ExpandedVtx expandedVtx = getPreviouslyVisitedVtx(agent.getCurrentVertex());
 		
 		if(expandedVtx != null){
@@ -79,8 +80,24 @@ private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>();
 			expandedVtx.setData(simulators, best);
 			expandedHistory.add(expandedVtx);
 		}
-		return chosenVtx;
 	}
+
+//	private Vertex getBestAction(Agent agent, List<Simulator> simulators) {
+//		Vertex chosenVtx;
+//		int best = Simulator.getBestActionIndex(simulators);
+//		chosenVtx = simulators.get(best).startingVtx;
+//		simulators.get(best).agent = null;
+//		ExpandedVtx expandedVtx = getPreviouslyVisitedVtx(agent.getCurrentVertex());
+//		
+//		if(expandedVtx != null){
+//			expandedVtx.setData(simulators, best);
+//		}else{
+//			expandedVtx = new ExpandedVtx(agent.getCurrentVertex());
+//			expandedVtx.setData(simulators, best);
+//			expandedHistory.add(expandedVtx);
+//		}
+//		return chosenVtx;
+//	}
 	
 	private void initSimulators(DefaultCtp ctp, Agent agent,
 			Set<Vertex> adjVertexes, List<Simulator> simulators) {
@@ -103,12 +120,15 @@ private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>();
 			currentRollout ++;
 			StochasticWeightedGraph rolloutedGraph = ctp.g.doRollout();
 			rolloutedGraph.removeAllBlockedEdges();
-			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
+			
 			for(int i = 0; i < simulators.size(); i++){
 				// I want my simulate agent to be always in same position and 
 				// I am using him only for creating traveling agent
+				StochasticWeightedGraph travellingGraph = (StochasticWeightedGraph) rolloutedGraph.clone();
+				travellingGraph.removeAllBlockedEdges();
 				Agent travellingAgent = new Agent(simulators.get(i).agent);
-				shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());
+				dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(travellingGraph);
+				shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), travellingGraph.getTerminalVtx());
 				if(shortestPath == null){
 					System.out.println(new GraphChecker().isGraphConnected(rolloutedGraph));
 				}
@@ -144,6 +164,11 @@ private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>();
 		@Override
 		public boolean equals(Object obj) {
 			return expandedVtx.equals(obj);
+		}
+		
+		@Override
+		public String toString() {
+			return expandedVtx.toString() + " ~= " + totalExpectedCost/totalIterationsMade;
 		}
 		
 		public void setData(List<Simulator> sims, int chosenOne){

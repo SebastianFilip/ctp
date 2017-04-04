@@ -79,14 +79,15 @@ public class Agent {
 	public boolean traversePathWithSensing(GraphPath<Vertex, StochasticWeightedEdge> path){
 		List<StochasticWeightedEdge> pathEdges = path.getEdgeList();
 		validateInputForTraverse(path, pathEdges);
-		
+		// seems that by sense action edges from ctp.g are removed not from path.getGraph
 		for (StochasticWeightedEdge e : pathEdges){
-			senseAction((StochasticWeightedGraph)path.getGraph());
 			if(e.beliefState == State.BLOCKED){
 				return false;
 			}
+			
 			setCurrentVertex(path.getGraph().getEdgeTarget(e));
 			totalCost += path.getGraph().getEdgeWeight(e);
+			senseAction((StochasticWeightedGraph)path.getGraph());
 		}
 		return true;
 	}

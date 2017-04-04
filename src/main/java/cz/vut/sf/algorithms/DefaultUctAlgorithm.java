@@ -1,0 +1,111 @@
+package cz.vut.sf.algorithms;
+
+import java.util.Date;
+import java.util.List;
+
+import cz.vut.sf.ctp.Agent;
+import cz.vut.sf.ctp.DefaultCtp;
+import cz.vut.sf.ctp.MonteCarloTreeSearch;
+import cz.vut.sf.ctp.Simulator;
+import cz.vut.sf.ctp.VtxDTO;
+import cz.vut.sf.graph.StochasticWeightedEdge;
+import cz.vut.sf.graph.TreeNode;
+import cz.vut.sf.graph.Vertex;
+
+public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implements DefaultCtpAlgorithm {
+	protected int numberOfRollouts = 20;
+	protected int numberOfIteration = 100;
+	private boolean logOnVtx = true;
+	private boolean logOnAvgCost = false;
+	private final long startTime = new Date().getTime();
+	private static long time;
+	
+	public Result solve(DefaultCtp ctp, Agent agent) {
+		int blockedEdgesRevealed = 0;
+		
+		while(agent.getCurrentVertex()!=ctp.t){
+			//If graph changes all of the children of current vertex should be expanded (explored)
+			boolean isGraphChanged = false;
+			agent.senseAction(ctp.g);
+			
+			if(blockedEdgesRevealed != ctp.g.getBlockedEdgesRevealed()){
+				blockedEdgesRevealed = ctp.g.getBlockedEdgesRevealed();
+				isGraphChanged = true;
+			}
+			
+			this.setRoot(agent.getCurrentVertex());
+			this.setGraph(ctp.g);
+			if(this.getRoot().isLeafNode()){
+				this.expandNode(this.getRoot(), agent.getPreviousVertex(isGraphChanged));
+			}
+			
+			if(this.getRoot().getChildren().isEmpty()){
+				//dead end -> go back
+				agent.traverseToAdjancetVtx(ctp.g, agent.getPreviousVertex(true));
+				continue;
+			}
+			if(this.getRoot().getChildren().size() == 1){
+				//there is only one possible child -> go through it
+				agent.traverseToAdjancetVtx(ctp.g, this.getRoot().getChildren().get(0).getData().vtx);
+				continue;
+			}
+			
+			this.doSearch(numberOfIteration, numberOfRollouts);
+			Vertex chosenOne = this.getBestAction();
+			agent.traverseToAdjancetVtx(ctp.g, chosenOne);
+			if(logOnVtx){
+				time = new Date(new Date().getTime() - startTime).getTime()/1000;
+				System.out.println("[" + time + "] agent goes through: "+chosenOne);
+			}
+		}
+		return new Result(agent, "Rollout Based Algorithm");
+	}
+
+	protected abstract void simulateTravelsals(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts);
+	
+	@Override
+	public TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts) {		
+		Simulator simulator = new Simulator(node.getParent().getData().vtx);
+		simulateTravelsals(simulator,node.getData().vtx ,numberOfRollouts);
+		return simulator;
+	}
+	
+	protected Vertex getBestAction(){
+		List<TreeNode<VtxDTO>> children = root.getChildren();
+		Vertex result = null;
+		double expectedMinCost = Double.MAX_VALUE;
+		for(int i = 0; i < children.size(); i++){
+			//if proposed vtx is not terminal the length of its edge muse be added
+			double additionalValue = getAdditionalValue(children.get(i).getData());
+	    	double totalCost = children.get(i).getData().totalExpectedCost;
+	    	int totalIteration = children.get(i).getData().visitsMade;
+			double averageCost = totalCost/totalIteration + additionalValue;
+			
+			if(logOnAvgCost)
+				System.out.println("average cost for [" + children.get(i).getData().vtx 
+					+"] is : "+ averageCost + 
+					" visits made:" + totalIteration);
+
+			if(averageCost < expectedMinCost){
+				expectedMinCost = averageCost;
+				result = children.get(i).getData().vtx;
+			}
+		}
+		return result;
+	}
+	
+	private double getAdditionalValue(VtxDTO data) {
+		// return edge weight from data.vtx to its parent.data.vtx
+		if(data.vtx == this.graph.getTerminalVtx()){
+			return 0;
+		}
+		StochasticWeightedEdge edge = this.getGraph().getEdge(this.root.getData().vtx, data.vtx);
+		return this.getGraph().getEdgeWeight(edge);
+	}
+}

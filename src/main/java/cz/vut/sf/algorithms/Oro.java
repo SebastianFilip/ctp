@@ -18,9 +18,10 @@ import cz.vut.sf.graph.Vertex;
  * then it simulate traversal optimistically (by Greedy Algorithm), 
  * action with the lowest expected mean value will be chosen.
  */
-public class Oro implements DefaultCtpAlgorithm {
+public class Oro extends LoggerClass implements DefaultCtpAlgorithm {
 	public int totalRollouts = 100;
 	public Result solve(DefaultCtp ctp, Agent agent) {
+		LOG.debug("Starting ORO, total rollouts = " + totalRollouts);
 		Vertex chosenVtx = null;
     	try {
 			do {
@@ -41,7 +42,7 @@ public class Oro implements DefaultCtpAlgorithm {
 					// there is only one possible way so go through it
 					chosenVtx = simulators.get(0).agent.getCurrentVertex();
 				}
-				
+				LOG.debug("Chosen vtx = " + chosenVtx);
 				agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			}while (!(agent.getCurrentVertex().equals(ctp.t)));
 		} catch (Exception e) {
@@ -57,9 +58,10 @@ public class Oro implements DefaultCtpAlgorithm {
 			for(int i = 0; i < simulators.size(); i++){
 				// I want my simulate agent to be always in same position and 
 				// I am using him only for creating traveling agent
+				StochasticWeightedGraph travellingGraph = (StochasticWeightedGraph) rolloutedGraph.clone();
 				Agent travellingAgent = new Agent(simulators.get(i).agent);
-				travellingAgent.senseAction(rolloutedGraph);
-				GreedyAlgorithm.traverseByGa(rolloutedGraph, rolloutedGraph.getTerminalVtx(), travellingAgent, false);
+				travellingAgent.senseAction(travellingGraph);
+				GreedyAlgorithm.traverseByGa(travellingGraph, travellingGraph.getTerminalVtx(), travellingAgent, false);
 				simulators.get(i).totalCost += travellingAgent.getTotalCost();
 				simulators.get(i).totalIterations ++;
 			}

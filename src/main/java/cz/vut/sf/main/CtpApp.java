@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.VertexFactory;
@@ -24,20 +25,34 @@ import cz.vut.sf.algorithms.Oro;
 import cz.vut.sf.algorithms.RepositionAlgorithm;
 import cz.vut.sf.algorithms.Result;
 import cz.vut.sf.algorithms.Uctb;
+import cz.vut.sf.algorithms.Ucto;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.EdgeConvertor;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.parsers.BasicCtpParser;
+import cz.vut.sf.parsers.ParsedDTO;
 import cz.vut.sf.parsers.TestData;
 
 public class CtpApp {
     static Graph<String, DefaultEdge> completeGraph;
-
+    private static final Logger LOG = Logger.getLogger(CtpApp.class);
+    
     public static void main(String[] args){
+//    	GraphSwing.doMagic();
+    	ParsedDTO graphData = new BasicCtpParser().parseFile("src/main/resources/eyerichx2.ctp");
     	//Instantiate CTP
-    	StochasticWeightedGraph g = new StochasticWeightedGraph(StochasticWeightedEdge.class, TestData.getData2());
+    	StochasticWeightedGraph g;
+//    	g = new StochasticWeightedGraph(StochasticWeightedEdge.class, TestData.getData2());
+    	g = new StochasticWeightedGraph(StochasticWeightedEdge.class, graphData);
+    	
+    	GraphSwing.displayGraph(g, graphData.pointList);
+//    	if(true){
+//    		return;
+//    	}
+    	
     	Vertex s = g.getSourceVtx();
     	Vertex t = g.getTerminalVtx();
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
@@ -49,18 +64,15 @@ public class CtpApp {
     		return;
     	}
     	
-    	//TEST RCTP
-    	
-    	
-    	
-    	//TEST RCTP
-    	
     	//Compute
     	List<AlgNames> algorithmsToBeMade = new ArrayList<AlgNames>();
-    	algorithmsToBeMade.add(AlgNames.UCTB);
-    	algorithmsToBeMade.add(AlgNames.HOP); algorithmsToBeMade.add(AlgNames.ORO);
-    	algorithmsToBeMade.add(AlgNames.GA); algorithmsToBeMade.add(AlgNames.RA);
-    	algorithmsToBeMade.add(AlgNames.CA);
+//    	algorithmsToBeMade.add(AlgNames.UCTO);
+//    	algorithmsToBeMade.add(AlgNames.UCTB);
+    	algorithmsToBeMade.add(AlgNames.HOP); 
+//    	algorithmsToBeMade.add(AlgNames.ORO);
+//    	algorithmsToBeMade.add(AlgNames.GA); 
+//    	algorithmsToBeMade.add(AlgNames.RA);
+//    	algorithmsToBeMade.add(AlgNames.CA);
     	List<Result> results = algorithmRunner(ctp, algorithmsToBeMade);
     	
     	//Print results
@@ -82,7 +94,7 @@ public class CtpApp {
     }
     
     private static enum AlgNames{
-    	GA,RA,CA,HOP,ORO,UCTB;
+    	GA,RA,CA,HOP,ORO,UCTB,UCTO;
     }
     
     private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms){
@@ -118,6 +130,11 @@ public class CtpApp {
 					case UCTB:
 						Uctb uctb = new Uctb();
 						r = uctb.solve(ctp, new Agent(ctp.s));
+						break;
+					case UCTO:
+						Ucto ucto = new Ucto();
+						r = ucto.solve(ctp, new Agent(ctp.s));
+						break;
 					}
 				//set graphClone to ctp
 				ctp.g = graphClone;

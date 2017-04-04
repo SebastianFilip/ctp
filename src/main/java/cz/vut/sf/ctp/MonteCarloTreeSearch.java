@@ -1,6 +1,5 @@
 package cz.vut.sf.ctp;
 
-import java.util.List;
 import java.util.Set;
 
 import cz.vut.sf.graph.StochasticWeightedEdge;
@@ -9,9 +8,9 @@ import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 import cz.vut.sf.ctp.VtxDTO;
 
-public abstract class MonteCarloTreeSearch {
-	private StochasticWeightedGraph graph;
-	private TreeNode<VtxDTO> root;
+public abstract class MonteCarloTreeSearch implements RolloutAble{
+	protected StochasticWeightedGraph graph;
+	protected TreeNode<VtxDTO> root;
 
 	public StochasticWeightedGraph getGraph() {
 		return graph;
@@ -37,8 +36,6 @@ public abstract class MonteCarloTreeSearch {
 	 * @param nodeToExpand
 	 */
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
-	
-	public abstract Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts);
 	
 	public void backPropagation(TreeNode<VtxDTO> fromNode, Simulator data){
 		final double propagatedValue = fromNode.getData().totalExpectedCost += data.totalCost / data.totalIterations;
@@ -107,37 +104,6 @@ public abstract class MonteCarloTreeSearch {
 		return false;
 	}
 
-	protected Vertex getBestAction(){
-		List<TreeNode<VtxDTO>> children = root.getChildren();
-		Vertex result = null;
-		double expectedMinCost = Double.MAX_VALUE;
-		for(int i = 0; i < children.size(); i++){
-			//if proposed vtx is not terminal the length of its edge muse be added
-			double additionalValue = getAdditionalValue(children.get(i).getData());
-	    	double totalCost = children.get(i).getData().totalExpectedCost;
-	    	int totalIteration = children.get(i).getData().visitsMade;
-			double averageCost = totalCost/totalIteration + additionalValue;
-			
-	    	System.out.println("average cost for [" + children.get(i).getData().vtx 
-					+"] is : "+ averageCost + 
-					" visits made:" + totalIteration);
-
-			if(averageCost < expectedMinCost){
-				expectedMinCost = averageCost;
-				result = children.get(i).getData().vtx;
-			}
-		}
-		return result;
-	}
-
-	private double getAdditionalValue(VtxDTO data) {
-		if(data.vtx == this.graph.getTerminalVtx()){
-			return 0;
-		}
-		StochasticWeightedEdge edge = this.getGraph().getEdge(this.root.getData().vtx, data.vtx);
-		return this.getGraph().getEdgeWeight(edge);
-	}
-
 	protected void expandNode(TreeNode<VtxDTO> currentNode) {
 		//find all children of parent (parent should not be child)
 		Vertex currentVtx = currentNode.getData().vtx;
@@ -167,8 +133,8 @@ public abstract class MonteCarloTreeSearch {
 			temp.setData(new VtxDTO(child));
 			currentNode.addChild(temp);
 		}
-		
-		
 	}
+	
+	public abstract Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts);
 	
 }

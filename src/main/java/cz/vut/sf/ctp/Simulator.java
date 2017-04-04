@@ -2,11 +2,12 @@ package cz.vut.sf.ctp;
 
 import java.util.List;
 
+import cz.vut.sf.algorithms.LoggerClass;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
 
 //holds copies of agent and moves them towards to specified vtx
-public class Simulator{
+public class Simulator extends LoggerClass{
 	public Agent agent;
 	public final Vertex startingVtx;
 	public double totalCost = 0;
@@ -31,9 +32,7 @@ public class Simulator{
 		Vertex result = null;
 		double expectedMinCost = Double.MAX_VALUE;
 		for(int i = 0; i < simulators.size(); i++){
-//	    	System.out.println("average cost for Vtx [" + simulators.get(i).startingVtx 
-//					+"] is : "+ simulators.get(i).totalCost/simulators.get(i).totalIterations);
-	    	
+	    	LOG.debug("average cost for Vtx [" + simulators.get(i).startingVtx +"] is : "+ simulators.get(i).totalCost/simulators.get(i).totalIterations);
 			double averageCost = simulators.get(i).totalCost/simulators.get(i).totalIterations;
 			if(averageCost < expectedMinCost){
 				expectedMinCost = averageCost;
@@ -46,14 +45,13 @@ public class Simulator{
 	public static int getBestActionIndex(List<Simulator> simulators) {
 		int result = 0;
 		double expectedMinCost = Double.MAX_VALUE;
-		for(int i = 0; i < simulators.size(); i++){	    	
+		for(int i = 0; i < simulators.size(); i++){
+			LOG.debug("average cost for Vtx [" + simulators.get(i).startingVtx +"] is : "+ simulators.get(i).totalCost/simulators.get(i).totalIterations);
 			double averageCost = simulators.get(i).totalCost/simulators.get(i).totalIterations;
 			if(averageCost < expectedMinCost){
 				expectedMinCost = averageCost;
 				result = i;
 			}
-//    		System.out.println("average cost for Vtx [" + simulators.get(i).startingVtx 
-//			+"] is : "+ simulators.get(i).totalCost/simulators.get(i).totalIterations);
 		}
 		return result;
 	}
