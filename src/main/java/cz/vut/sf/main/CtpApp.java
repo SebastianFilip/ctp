@@ -24,7 +24,9 @@ import cz.vut.sf.algorithms.Hop;
 import cz.vut.sf.algorithms.Oro;
 import cz.vut.sf.algorithms.RepositionAlgorithm;
 import cz.vut.sf.algorithms.Result;
+import cz.vut.sf.algorithms.UctPrunning;
 import cz.vut.sf.algorithms.Uctb;
+import cz.vut.sf.algorithms.Uctb2;
 import cz.vut.sf.algorithms.Ucto;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
@@ -42,7 +44,7 @@ public class CtpApp {
     
     public static void main(String[] args){
 //    	GraphSwing.doMagic();
-    	ParsedDTO graphData = new BasicCtpParser().parseFile("src/main/resources/eyerichx2.ctp");
+    	ParsedDTO graphData = new BasicCtpParser().parseFile("src/main/resources/eyerichx2Cycle.ctp");
     	//Instantiate CTP
     	StochasticWeightedGraph g;
 //    	g = new StochasticWeightedGraph(StochasticWeightedEdge.class, TestData.getData2());
@@ -56,7 +58,6 @@ public class CtpApp {
     	Vertex s = g.getSourceVtx();
     	Vertex t = g.getTerminalVtx();
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
-    	System.out.println(g.toString());
     	if(!new GraphChecker().isGraphConnected(g)){
     		System.out.println("is connected: false");
     		g.removeAllBlockedEdges();
@@ -66,11 +67,13 @@ public class CtpApp {
     	
     	//Compute
     	List<AlgNames> algorithmsToBeMade = new ArrayList<AlgNames>();
+    	algorithmsToBeMade.add(AlgNames.UCTP);
 //    	algorithmsToBeMade.add(AlgNames.UCTO);
-//    	algorithmsToBeMade.add(AlgNames.UCTB);
+    	algorithmsToBeMade.add(AlgNames.UCTB);
+    	algorithmsToBeMade.add(AlgNames.UCTB2);
     	algorithmsToBeMade.add(AlgNames.HOP); 
-//    	algorithmsToBeMade.add(AlgNames.ORO);
-//    	algorithmsToBeMade.add(AlgNames.GA); 
+    	algorithmsToBeMade.add(AlgNames.ORO);
+    	algorithmsToBeMade.add(AlgNames.GA); 
 //    	algorithmsToBeMade.add(AlgNames.RA);
 //    	algorithmsToBeMade.add(AlgNames.CA);
     	List<Result> results = algorithmRunner(ctp, algorithmsToBeMade);
@@ -78,10 +81,11 @@ public class CtpApp {
     	//Print results
     	printResult(results);
     	//Optimal solution print s->t
+    	LOG.info("starting DIJKSTRA");
     	ctp.g.removeAllBlockedEdges();
     	DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(ctp.g);
     	GraphPath<Vertex, StochasticWeightedEdge> shortestPath = dsp.getPath(s, t);
-    	System.out.println("SP cost: "+ shortestPath.getWeight() +" through: "+shortestPath.getVertexList().toString());
+    	LOG.info("DIJKSTRA cost: "+ shortestPath.getWeight() +" through: "+shortestPath.getVertexList().toString());
     }
     
     private static void printResult(List<Result> results){
@@ -94,7 +98,7 @@ public class CtpApp {
     }
     
     private static enum AlgNames{
-    	GA,RA,CA,HOP,ORO,UCTB,UCTO;
+    	GA,RA,CA,HOP,ORO,UCTB,UCTO, UCTB2, UCTP;
     }
     
     private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms){
@@ -134,6 +138,14 @@ public class CtpApp {
 					case UCTO:
 						Ucto ucto = new Ucto();
 						r = ucto.solve(ctp, new Agent(ctp.s));
+						break;
+					case UCTB2:
+						Uctb2 uctb2 = new Uctb2();
+						r = uctb2.solve(ctp, new Agent(ctp.s));
+						break;
+					case UCTP:
+						UctPrunning uctp = new UctPrunning();
+						r = uctp.solve(ctp, new Agent(ctp.s));
 						break;
 					}
 				//set graphClone to ctp

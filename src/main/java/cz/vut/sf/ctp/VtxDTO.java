@@ -17,7 +17,10 @@ public class VtxDTO{
 
 	@Override
 	public boolean equals(Object obj) {
-		return vtx.equals(obj);
+		if(obj instanceof VtxDTO){
+			return vtx.equals(((VtxDTO) obj).vtx);
+		}
+		return super.equals(obj);
 	}
 
 	@Override

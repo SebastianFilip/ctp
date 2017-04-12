@@ -9,9 +9,10 @@ import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
 
-public class GreedyAlgorithm implements DefaultCtpAlgorithm {
+public class GreedyAlgorithm extends LoggerClass implements DefaultCtpAlgorithm {
 
 	public Result solve(DefaultCtp ctp, Agent agent) {
+		LOG.info("Starting Greedy Algorithm");
 		agent.senseAction(ctp.g);
     	traverseByGa(ctp.g, ctp.t, agent, false);
 		return new Result(agent, "greedy");

@@ -22,6 +22,7 @@ public class Ucto extends DefaultUctAlgorithm{
 	
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
+		LOG.debug("Starting UCTB, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
 		Result result = super.solve(ctp, agent);
 		result.msg = "UCTO";
 		return result;

@@ -2,13 +2,14 @@ package cz.vut.sf.ctp;
 
 import java.util.Set;
 
-import cz.vut.sf.graph.StochasticWeightedEdge;
+import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.algorithms.LoggerClass;
 import cz.vut.sf.ctp.VtxDTO;
 
-public abstract class MonteCarloTreeSearch implements RolloutAble{
+public abstract class MonteCarloTreeSearch extends LoggerClass implements RolloutAble{
 	protected StochasticWeightedGraph graph;
 	protected TreeNode<VtxDTO> root;
 
@@ -38,32 +39,21 @@ public abstract class MonteCarloTreeSearch implements RolloutAble{
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
 	
 	public void backPropagation(TreeNode<VtxDTO> fromNode, Simulator data){
-		final double propagatedValue = fromNode.getData().totalExpectedCost += data.totalCost / data.totalIterations;
+		final double totalPropagatedValue = fromNode.getData().totalExpectedCost += data.totalCost / data.totalIterations;
 		final int totalVisitsOfExplored  = ++fromNode.getData().visitsMade;
 		
-//		StringBuilder sb = new StringBuilder();
-//		sb.append(fromNode.getData().vtx );
+		StringBuilder sb = new StringBuilder();
+		sb.append(fromNode.getData().vtx );
 		do {
-//			sb.append("->" + fromNode.getParent().getData().vtx);
+			sb.append("<-" + fromNode.getParent().getData().vtx);
 			
-			fromNode.getParent().getData().totalExpectedCost += propagatedValue/totalVisitsOfExplored;
+			fromNode.getParent().getData().totalExpectedCost += totalPropagatedValue/totalVisitsOfExplored;
 			fromNode.getParent().getData().visitsMade ++;
 			fromNode = fromNode.getParent();
 		}while(fromNode.getParent()!=null);
-//		System.out.println("back propagation for "+ sb.toString() + " = " + propagatedValue/totalVisitsOfExplored);
-//		getBestAction();
+		LOG.debug("back propagation for "+ sb.toString() + " = " + totalPropagatedValue/totalVisitsOfExplored);
 	}
-	
-	public void backPropagationForTerminal(TreeNode<VtxDTO> fromNode){
-		updateTerminalData(fromNode);
-		double valueToPropagate = fromNode.getData().totalExpectedCost/fromNode.getData().visitsMade;
-		do {
-			fromNode.getParent().getData().visitsMade ++;
-			fromNode.getParent().getData().totalExpectedCost += valueToPropagate;
-			fromNode = fromNode.getParent();
-		}while(fromNode.getParent()!=null);
-	}
-	
+		
 	public void doSearch(final int numberOfIteration, final int numberOfRollouts){
 		Simulator rolloutData = null;
 		for(int i=0; i < numberOfIteration; i++){
@@ -73,17 +63,20 @@ public abstract class MonteCarloTreeSearch implements RolloutAble{
 				currentNode = pickNode(currentNode);
 			}
 			
-			//rollout
-//			if(checkTerminalNode(currentNode)){
-//				backPropagationForTerminal(currentNode);
-//				continue;
-//			}
-			
 			if(currentNode.getData().visitsMade == 0){
 				rolloutData = rollout(currentNode, numberOfRollouts);
 			}else{
 				if(!checkTerminalNode(currentNode)){
 					expandNode(currentNode);
+					if(currentNode.isLeafNode()){
+						// dead end of tree, set expected cost so high it will not be explored again
+						LOG.debug("dead end of search tree for " + currentNode.getData().vtx + ", parent " + currentNode.getParent().getData().vtx);
+						currentNode.getData().totalExpectedCost += Double.MAX_VALUE/numberOfIteration;
+						if(currentNode.getData().totalExpectedCost < Double.MAX_VALUE/numberOfIteration){
+							throw new CtpException("Double overflow!");
+						}
+						continue;
+					}
 					currentNode = pickNode(currentNode);
 				}
 				rolloutData = rollout(currentNode, numberOfRollouts);
@@ -92,20 +85,14 @@ public abstract class MonteCarloTreeSearch implements RolloutAble{
 		}
 	}
 	
-	private void updateTerminalData(TreeNode<VtxDTO> node){
-		StochasticWeightedEdge edgeFromParentToChild = this.getGraph().getEdge(node.getParent().getData().vtx, node.getData().vtx);
-		node.getData().totalExpectedCost += this.getGraph().getEdgeWeight(edgeFromParentToChild);
-		node.getData().visitsMade ++;
-	}
-	
-	private boolean checkTerminalNode(TreeNode<VtxDTO> node) {
+	protected boolean checkTerminalNode(TreeNode<VtxDTO> node) {
 		if(node.getData().vtx.equals(graph.getTerminalVtx()))
 			return true;
 		return false;
 	}
 
 	protected void expandNode(TreeNode<VtxDTO> currentNode) {
-		//find all children of parent (parent should not be child)
+		//find all children of parent (parent will not be child)
 		Vertex currentVtx = currentNode.getData().vtx;
 		Set<Vertex> children = StochasticWeightedGraph.getAdjacentVertexes(currentVtx, graph);
 		for(Vertex child: children){
@@ -118,7 +105,7 @@ public abstract class MonteCarloTreeSearch implements RolloutAble{
 		
 	}
 	/**
-	 * Expands passes currentNode, Vertex parent will not be new child of currentNode
+	 * Expands children of currentNode, Vertex parent will not be new child of currentNode
 	 * set parent = null if you want to expand all of the children
 	 * @param currentNode
 	 * @param parent

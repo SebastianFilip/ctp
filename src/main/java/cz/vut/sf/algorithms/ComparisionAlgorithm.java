@@ -8,9 +8,10 @@ import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.Vertex;
 
-public class ComparisionAlgorithm implements DefaultCtpAlgorithm {
+public class ComparisionAlgorithm extends LoggerClass implements DefaultCtpAlgorithm {
 
 	public Result solve(DefaultCtp ctp, Agent agent) {
+		LOG.info("Starting Comparision Algorithm");
 		agent.senseAction(ctp.g);
     	
     	DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
@@ -36,7 +37,7 @@ public class ComparisionAlgorithm implements DefaultCtpAlgorithm {
     			counter = 3;
     		}
     	}while (!(agent.getCurrentVertex().equals(ctp.t)));
-		return new Result(agent, "comparation");
+		return new Result(agent, "comparision");
 	}
 
 }

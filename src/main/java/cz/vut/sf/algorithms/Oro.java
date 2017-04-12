@@ -19,9 +19,9 @@ import cz.vut.sf.graph.Vertex;
  * action with the lowest expected mean value will be chosen.
  */
 public class Oro extends LoggerClass implements DefaultCtpAlgorithm {
-	public int totalRollouts = 100;
+	public int totalRollouts = 500;
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.debug("Starting ORO, total rollouts = " + totalRollouts);
+		LOG.info("Starting ORO, total rollouts = " + totalRollouts);
 		Vertex chosenVtx = null;
     	try {
 			do {

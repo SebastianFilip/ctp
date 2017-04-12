@@ -6,7 +6,7 @@ import java.util.List;
 
 public class TreeNode<T> implements Iterable<TreeNode<T>>{
 	private T data;
-	private final TreeNode<T> parent;
+	private TreeNode<T> parent;
 	private List<TreeNode<T>> children;
 	public TreeNode(TreeNode<T> p){
 		this.parent = p;
@@ -15,7 +15,7 @@ public class TreeNode<T> implements Iterable<TreeNode<T>>{
 	
 	@Override
 	public String toString() {
-		return data.toString();
+		return data.toString() + ". Parent "  + parent.getData().toString();
 	}
 	
 	public List<TreeNode<T>> getChildren(){
@@ -23,6 +23,10 @@ public class TreeNode<T> implements Iterable<TreeNode<T>>{
 	}
 	public TreeNode<T> getParent(){
 		return parent;
+	}
+	
+	public void setParent(TreeNode<T> newParent){
+		this.parent = newParent;
 	}
 	
 	public void setChildren(List<TreeNode<T>> children){

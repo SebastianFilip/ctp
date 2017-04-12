@@ -9,9 +9,10 @@ import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedEdge.State;
 import cz.vut.sf.graph.Vertex;
 
-public class RepositionAlgorithm implements DefaultCtpAlgorithm {
+public class RepositionAlgorithm extends LoggerClass implements DefaultCtpAlgorithm {
 
 	public Result solve(DefaultCtp ctp, Agent agent) {
+		LOG.info("Starting Reposition Algorithm");
 		agent.senseAction(ctp.g);
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
     	GraphPath<Vertex, StochasticWeightedEdge> shortestPath;

@@ -25,7 +25,7 @@ import cz.vut.sf.graph.Vertex;
  */
 public class Hop extends LoggerClass implements DefaultCtpAlgorithm {
 	
-public int totalRollouts = 5000;
+public int totalRollouts = 500;
 // expandedHistory Set bias HOP to do more exploring by "remembering" previously visited vtxs
 // and setting its estimated cost for all other vertexes but chosen one. This is done till new blockage 
 // is explored, then Set is nulled.
@@ -33,7 +33,7 @@ public int totalRollouts = 5000;
 private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>(); 
 
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.debug("Starting HOP, total rollouts = " + totalRollouts);
+		LOG.info("Starting HOP, total rollouts = " + totalRollouts);
 		Vertex chosenVtx = null;
 		int blockedEdgesRevealed = 0;
     	try {
@@ -129,9 +129,6 @@ private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>();
 				Agent travellingAgent = new Agent(simulators.get(i).agent);
 				dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(travellingGraph);
 				shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), travellingGraph.getTerminalVtx());
-				if(shortestPath == null){
-					System.out.println(new GraphChecker().isGraphConnected(rolloutedGraph));
-				}
 				double costOfEdgeToChosenVtx = simulators.get(i).agent.getTotalCost();
 				simulators.get(i).totalCost += shortestPath.getWeight() + costOfEdgeToChosenVtx;
 				simulators.get(i).totalIterations ++;

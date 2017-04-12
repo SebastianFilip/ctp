@@ -1,6 +1,5 @@
 package cz.vut.sf.algorithms;
 
-import java.util.Date;
 import java.util.List;
 
 import cz.vut.sf.ctp.Agent;
@@ -8,17 +7,14 @@ import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.ctp.MonteCarloTreeSearch;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
+import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
 public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implements DefaultCtpAlgorithm {
-	protected int numberOfRollouts = 20;
+	protected int numberOfRollouts = 100;
 	protected int numberOfIteration = 100;
-	private boolean logOnVtx = true;
-	private boolean logOnAvgCost = false;
-	private final long startTime = new Date().getTime();
-	private static long time;
 	
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		int blockedEdgesRevealed = 0;
@@ -36,27 +32,26 @@ public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implement
 			this.setRoot(agent.getCurrentVertex());
 			this.setGraph(ctp.g);
 			if(this.getRoot().isLeafNode()){
+				LOG.debug("Expanding root = "+ this.getRoot().getData().vtx +", except for parent = " + agent.getPreviousVertex(isGraphChanged));
 				this.expandNode(this.getRoot(), agent.getPreviousVertex(isGraphChanged));
 			}
 			
 			if(this.getRoot().getChildren().isEmpty()){
-				//dead end -> go back
-				agent.traverseToAdjancetVtx(ctp.g, agent.getPreviousVertex(true));
-				continue;
+				//this means that algorithm choose to travel to vtx about which knew that is dead end
+				LOG.error("This should never happen!! Chosen vtx(dead end) = " + agent.getPreviousVertex(true));
+				throw new CtpException("Uct choose to go to dead end vtx");
 			}
 			if(this.getRoot().getChildren().size() == 1){
 				//there is only one possible child -> go through it
+				LOG.debug("Chosen vtx(only child) = " + this.getRoot().getChildren().get(0).getData().vtx);
 				agent.traverseToAdjancetVtx(ctp.g, this.getRoot().getChildren().get(0).getData().vtx);
 				continue;
 			}
 			
 			this.doSearch(numberOfIteration, numberOfRollouts);
-			Vertex chosenOne = this.getBestAction();
-			agent.traverseToAdjancetVtx(ctp.g, chosenOne);
-			if(logOnVtx){
-				time = new Date(new Date().getTime() - startTime).getTime()/1000;
-				System.out.println("[" + time + "] agent goes through: "+chosenOne);
-			}
+			Vertex chosenVtx = this.getBestAction();
+			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
+			LOG.debug("Chosen vtx = " + chosenVtx);
 		}
 		return new Result(agent, "Rollout Based Algorithm");
 	}
@@ -64,10 +59,7 @@ public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implement
 	protected abstract void simulateTravelsals(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts);
 	
 	@Override
-	public TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
 
 	@Override
 	public Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts) {		
@@ -86,12 +78,10 @@ public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implement
 	    	double totalCost = children.get(i).getData().totalExpectedCost;
 	    	int totalIteration = children.get(i).getData().visitsMade;
 			double averageCost = totalCost/totalIteration + additionalValue;
-			
-			if(logOnAvgCost)
-				System.out.println("average cost for [" + children.get(i).getData().vtx 
+			LOG.debug("average cost for [" + children.get(i).getData().vtx 
 					+"] is : "+ averageCost + 
 					" visits made:" + totalIteration);
-
+		
 			if(averageCost < expectedMinCost){
 				expectedMinCost = averageCost;
 				result = children.get(i).getData().vtx;

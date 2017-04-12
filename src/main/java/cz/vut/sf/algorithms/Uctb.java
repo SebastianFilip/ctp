@@ -14,6 +14,7 @@ import cz.vut.sf.graph.Vertex;
 public class Uctb extends DefaultUctAlgorithm{
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
+		LOG.info("Starting UCTB, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
 		Result result = super.solve(ctp, agent);
 		result.msg = "UCTB";
 		return result;
@@ -22,7 +23,7 @@ public class Uctb extends DefaultUctAlgorithm{
 	@Override
 	public TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> node) {
 		if(node.isLeafNode()){
-			throw new CtpException("pickNode method called with leaf node. Expand node first.");
+			throw new CtpException("pickNode method called with leaf node: "+ node.toString() +". Expand node first.");
 		}
 		double maxUctValue = -1*Double.MAX_VALUE;
 		int maxValueIndex = -1;
@@ -39,15 +40,16 @@ public class Uctb extends DefaultUctAlgorithm{
 		return node.getChildren().get(maxValueIndex);
 	}
 	
-	private double evaluateUctFormula(TreeNode<VtxDTO> child) {
+	protected double evaluateUctFormula(TreeNode<VtxDTO> child) {
 		if(child.getData().visitsMade == 0){
 			return Double.MAX_VALUE;
 		}
 		double result = 0;
 		double bias = child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade;
+//		bias *= 10;
 //		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
 		result -= child.getData().totalExpectedCost/child.getData().visitsMade;
-		result += bias*Math.sqrt(Math.log(child.getParent().getData().visitsMade)/child.getData().visitsMade);
+		result += bias*Math.sqrt(Math.log10(child.getParent().getData().visitsMade)/child.getData().visitsMade);
 		return result;
 	}
 	

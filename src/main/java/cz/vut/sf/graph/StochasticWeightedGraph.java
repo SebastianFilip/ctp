@@ -145,8 +145,8 @@ public class StochasticWeightedGraph extends
 	}
 
 	public StochasticWeightedGraph doRollout(int recursiveChecker) {
-		if(recursiveChecker >= 100){
-			throw new CtpException("Rollout method called recursivly hundred times perhaps "
+		if(recursiveChecker >= 10){
+			throw new CtpException("Rollout method called recursivly ten times perhaps "
 					+ "probabilites are so high so it cant easily return connected graph");
 		}
 		StochasticWeightedGraph graphClone = (StochasticWeightedGraph) this.clone();
