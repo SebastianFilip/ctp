@@ -4,7 +4,7 @@ import java.util.List;
 
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
-import cz.vut.sf.ctp.MonteCarloTreeSearch;
+import cz.vut.sf.ctp.AbstractMonteCarloTreeSearch;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.CtpException;
@@ -12,9 +12,9 @@ import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implements DefaultCtpAlgorithm {
-	protected int numberOfRollouts = 100;
-	protected int numberOfIteration = 100;
+public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch implements UctAlgorithm {
+	protected int numberOfRollouts = 1;
+	protected int numberOfIteration = 1000;
 	
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		int blockedEdgesRevealed = 0;
@@ -56,7 +56,7 @@ public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implement
 		return new Result(agent, "Rollout Based Algorithm");
 	}
 
-	protected abstract void simulateTravelsals(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts);
+	public abstract void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts);
 	
 	@Override
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
@@ -64,7 +64,7 @@ public abstract class DefaultUctAlgorithm extends MonteCarloTreeSearch implement
 	@Override
 	public Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts) {		
 		Simulator simulator = new Simulator(node.getParent().getData().vtx);
-		simulateTravelsals(simulator,node.getData().vtx ,numberOfRollouts);
+		doSimulation(simulator,node.getData().vtx ,numberOfRollouts);
 		return simulator;
 	}
 	

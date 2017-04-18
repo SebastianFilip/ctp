@@ -1,3 +1,5 @@
-[21:51:54] INFO  [UctPrunning] Starting UCTP, total rollouts = 100, total iteration = 100
-[21:51:54] INFO  [CtpApp] starting DIJKSTRA
-[21:51:54] INFO  [CtpApp] DIJKSTRA cost: 142.0 through: [V1, V4, V5, V8, V11, V12, V15]
+[01:46:14] INFO  [CtpApp] starting DIJKSTRA
+[01:46:14] INFO  [CtpApp] DIJKSTRA alg [costPaid=160.0] through: [V1, V13, V28, V34, V41, V53, V68, V83, V95, V100]
+[01:46:14] INFO  [Hop] Starting HOP, total rollouts = 1000
+[01:46:25] INFO  [CtpApp] HOP alg [costPaid=160.0] through: [V1, V13, V28, V34, V41, V53, V68, V83, V95, V100]
+[01:46:25] INFO  [UctPrunning] Starting UCTP, total rollouts = 10, total iteration = 100000

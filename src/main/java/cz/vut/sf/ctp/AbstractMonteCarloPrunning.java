@@ -15,8 +15,9 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch {
+public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeSearch {
 	private static Map<Vertex, ExpandedNodeDTO> expandedVtx = null;
+	Set<Vertex> pathToRoot= null;
 	
 	@Override
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
@@ -29,12 +30,17 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 		expandedVtx = new HashMap<Vertex, ExpandedNodeDTO>();
 		Simulator rolloutData = null;
 		for(int i=0; i < numberOfIteration; i++){
+			if(root.getChildren().size() == 1){return;}
+			boolean innerCycle = false;
 			TreeNode<VtxDTO> currentNode = root;
-			Set<TreeNode<VtxDTO>> pathToRoot = new HashSet<TreeNode<VtxDTO>>();
+			pathToRoot = new HashSet<Vertex>();
 			//pick node to explore
 			while(!currentNode.isLeafNode()){
 				currentNode = pickNode(currentNode);
-				pathToRoot.add(currentNode);
+				if(!pathToRoot.add(currentNode.getData().vtx)){
+					LOG.debug("Exploring vtx:" + currentNode.toString() + ", is already on path to root!");
+					innerCycle = true;
+				}
 			}
 			
 			if(currentNode.getData().visitsMade == 0){
@@ -54,18 +60,19 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 						continue;
 					}
 					currentNode = pickNode(currentNode);
-					if(!pathToRoot.add(currentNode)){
-						LOG.info("Exploring vtx:" + currentNode.getData() + ", is already on path to root!");
+					if(!pathToRoot.add(currentNode.getData().vtx)){
+						LOG.debug("Exploring vtx:" + currentNode.toString() + ", is already on path to root!");
+						innerCycle = true;
 					}
 				}
 				rolloutData = rollout(currentNode, numberOfRollouts);
 			}
 			backPropagation(currentNode, rolloutData);
-			checkExpandedVtx(rolloutData, currentNode);
+			checkExpandedVtx(rolloutData, currentNode, innerCycle);
 		}
 	}
 	
-	private void checkExpandedVtx(Simulator rolloutData, TreeNode<VtxDTO> currentNode) {
+	private void checkExpandedVtx(Simulator rolloutData, TreeNode<VtxDTO> currentNode, boolean innerCycle) {
 		//!checkTerminalNode(currentNode)
 		double expectedCost = rolloutData.totalCost/rolloutData.totalIterations;
 		double avgExpectedCost = getAvgExpectdCost(currentNode, expectedCost);
@@ -75,9 +82,13 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 		}else{
 			//do pruning but only for different dto's -> for terminal vtx it happens 
 			//that the same dto's can occur
-			if(!expandedVtx.get(currentNode.getData().vtx).parent.equals(dto.parent)){					
-				doPrunning(expandedVtx.get(currentNode.getData().vtx),dto, currentNode.getData().vtx);
-				return;
+			if(!expandedVtx.get(currentNode.getData().vtx).parent.equals(dto.parent)){
+				if(!innerCycle){
+					doPrunning(expandedVtx.get(currentNode.getData().vtx),dto, currentNode.getData().vtx);
+				}else{
+					LOG.debug("Inner cycle! Pruning vtx: " + currentNode.getData().vtx + ", with parent: " + dto.parent);
+					prune(dto, expandedVtx.get(currentNode.getData().vtx), currentNode.getData().vtx);
+				}
 			}else{
 				if(!currentNode.getData().vtx.equals(graph.getTerminalVtx())){
 					LOG.error("THIS SHOULD NOT HAPPEN!!!!!!!!!!!!!!!!!");
@@ -85,8 +96,6 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 			}
 		}
 	}
-	
-
 
 	private void doPrunning(ExpandedNodeDTO oldDto, ExpandedNodeDTO newDto, Vertex doubler) {
 		ExpandedNodeDTO pruneDto = null;
@@ -101,9 +110,7 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 		}
 		LOG.debug("Prunning vtx: " + doubler + ", with parent: " + pruneDto.parent);
 		LOG.debug("Keeping vtx: " + doubler + ", with parent: " + dtoToKeep.parent);
-		if(doubler.equals(graph.getVtxById(39))){
-			int i = 10;
-		}
+
 		prune(pruneDto, dtoToKeep, doubler);
 		expandedVtx.put(doubler, dtoToKeep);
 	}
@@ -129,15 +136,15 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 					for(int j=0; j < nodeToKeep.getChildren().size(); j++){
 						if(nodeToKeep.getChildren().get(j).getData().equals(childToMove.getData())
 								&& nodeToKeep.getChildren().get(j).getData().visitsMade != 0){
-							throw new CtpException("In tree it should never happen that there are to same already visited vtx:" + childToMove.getData().vtx);
+							throw new CtpException("In tree it should never happen that there are two same already visited vtx:" + childToMove.getData().vtx);
 						}
 					}
 				}
 				childToMove.setParent(nodeToKeep);
 				nodeToKeep.getChildren().add(childToMove);
+				reBackPropagateBranch(childToMove);
 			}
 		}
-		
 		
 		//check if pruned vtx was the only child then prune parent as well
 		TreeNode<VtxDTO> parentOfCurrent = pruneNode.getParent();
@@ -150,6 +157,23 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 		}
 	}
 
+	private void reBackPropagateBranch(TreeNode<VtxDTO> childToMove) {
+		final double valueToPropagate = childToMove.getData().totalExpectedCost;
+		final int visitsToPropagate = childToMove.getData().visitsMade;
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append(childToMove.getData().vtx );
+		TreeNode<VtxDTO> propagationNode = childToMove;
+		while(propagationNode.getParent()!=null) {
+			sb.append("<-" + propagationNode.getParent().getData().vtx);
+			
+			propagationNode.getParent().getData().totalExpectedCost += valueToPropagate;
+			propagationNode.getParent().getData().visitsMade += visitsToPropagate;
+			propagationNode = propagationNode.getParent();
+		}
+		LOG.debug("re-propagation for "+ sb.toString() + ": " + valueToPropagate + "/" + visitsToPropagate +" = " + valueToPropagate/visitsToPropagate);
+	}
+
 	private List<TreeNode<VtxDTO>>  removeVtxNodeFromParentNodeTree(final Vertex vtx, TreeNode<VtxDTO> parentNode) {
 		List<TreeNode<VtxDTO>> result= null;
 		boolean wasRemoved = false;
@@ -160,7 +184,7 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 				
 				if(child.getChildren() != null && !child.getChildren().isEmpty()){
 					result = child.getChildren();
-					LOG.debug("Vtx to remove: " + vtx + ", has children!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+					LOG.debug("Vtx to remove: " + vtx + ", has " + result.size() +" child(ren)!");
 				}
 				iterator.remove();
 				wasRemoved = true;
@@ -214,6 +238,7 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 		Queue <TreeNode<VtxDTO>> open = new ArrayDeque<TreeNode<VtxDTO>>();
 		TreeNode<VtxDTO> current = this.getRoot();
 		open.add(current);
+		boolean parentFound= false;
 		// search for t's parent in whole tree
 		while(!open.isEmpty()){
 			current = open.poll();
@@ -223,6 +248,7 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 				throw new CtpException("there are no children for vtx");
 			}
 			if(current.getData().vtx.equals(parent)){
+				parentFound = true;
 				for(int i=0; i < children.size(); i++){
 					if(children.get(i).getData().vtx.equals(required)){
 						return children.get(i);
@@ -233,7 +259,7 @@ public abstract class MonteCarloPrunningTreeSearch extends MonteCarloTreeSearch 
 				open.add(children.get(i)); 
 			}
 		}
-		LOG.warn("There were no element:" + required + " with parent:"+ parent +" within tree (by Breadth First Search)");
+		LOG.info("There were no element:" + required + " with parent:"+ parent + " found = " + parentFound + " within tree (by Breadth First Search)");
 		return null;
 	}	
 	private TreeNode<VtxDTO> getFromTreeByDFS(final Vertex required, final Vertex parent){

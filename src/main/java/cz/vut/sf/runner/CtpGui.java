@@ -1,4 +1,4 @@
-package cz.vut.sf.main;
+package cz.vut.sf.runner;
 
 public class CtpGui extends GraphSwing{
 

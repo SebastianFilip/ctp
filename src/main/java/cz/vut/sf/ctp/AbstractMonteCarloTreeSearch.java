@@ -7,9 +7,10 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 import cz.vut.sf.algorithms.LoggerClass;
+import cz.vut.sf.algorithms.RolloutAble;
 import cz.vut.sf.ctp.VtxDTO;
 
-public abstract class MonteCarloTreeSearch extends LoggerClass implements RolloutAble{
+public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implements RolloutAble{
 	protected StochasticWeightedGraph graph;
 	protected TreeNode<VtxDTO> root;
 
@@ -38,7 +39,7 @@ public abstract class MonteCarloTreeSearch extends LoggerClass implements Rollou
 	 */
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
 	
-	public void backPropagation(TreeNode<VtxDTO> fromNode, Simulator data){
+	protected void backPropagation(TreeNode<VtxDTO> fromNode, Simulator data){
 		final double totalPropagatedValue = fromNode.getData().totalExpectedCost += data.totalCost / data.totalIterations;
 		final int totalVisitsOfExplored  = ++fromNode.getData().visitsMade;
 		

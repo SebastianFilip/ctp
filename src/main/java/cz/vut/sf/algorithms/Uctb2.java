@@ -49,14 +49,15 @@ public class Uctb2 extends Uctb {
 			
 			this.doSearch(numberOfIteration, numberOfRollouts);
 			Vertex chosenVtx = this.getBestAction();
-			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			LOG.debug("Chosen vtx = " + chosenVtx);
+			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
+			
 		}
 		return new Result(agent, "UCTB2");
 	}
 	
 	@Override
-	protected void simulateTravelsals(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
 		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
 		int currentRollout = 0;

@@ -7,7 +7,7 @@ import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
-import cz.vut.sf.ctp.MonteCarloPrunningTreeSearch;
+import cz.vut.sf.ctp.AbstractMonteCarloPrunning;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.CtpException;
@@ -16,9 +16,9 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public class UctPrunning extends MonteCarloPrunningTreeSearch implements DefaultCtpAlgorithm{
-	protected int numberOfRollouts = 100;
-	protected int numberOfIteration = 100;
+public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgorithm{
+	protected int numberOfRollouts = 10;
+	protected int numberOfIteration = 100000;
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		LOG.info("Starting UCTP, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
 		int blockedEdgesRevealed = 0;
@@ -64,11 +64,11 @@ public class UctPrunning extends MonteCarloPrunningTreeSearch implements Default
 	@Override
 	public Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts) {		
 		Simulator simulator = new Simulator(node.getParent().getData().vtx);
-		simulateTravelsals(simulator,node.getData().vtx ,numberOfRollouts);
+		doSimulation(simulator,node.getData().vtx ,numberOfRollouts);
 		return simulator;
 	}
 	
-	protected void simulateTravelsals(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
 		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
 		int currentRollout = 0;
@@ -85,6 +85,7 @@ public class UctPrunning extends MonteCarloPrunningTreeSearch implements Default
 				//mby later it will be needed to check if graph is connected
 				if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, vtxWhichIsExplored, travellingAgent)){
 					//there is no path from current travellingAgent position to vertex which is about to be explored
+					LOG.debug("In rollouted graph there were no path to adjancent vtx. Skipping rollout...");
 					continue;
 				}
 			}else{
@@ -93,9 +94,11 @@ public class UctPrunning extends MonteCarloPrunningTreeSearch implements Default
 			//finish route by Dijkstra
 			rolloutedGraph.removeAllBlockedEdges();
 			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
-			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
 			shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());
-
+			if(shortestPath == null){
+				LOG.debug("In rollouted graph there were no path to terminal vtx. Skipping rollout...");
+				continue;
+			}
 			simulator.totalCost += travellingAgent.getTotalCost() + shortestPath.getWeight();
 			simulator.totalIterations ++;
 		}while(currentRollout < numberOfRollouts);
@@ -107,10 +110,9 @@ public class UctPrunning extends MonteCarloPrunningTreeSearch implements Default
 		double expectedMinCost = Double.MAX_VALUE;
 		for(int i = 0; i < children.size(); i++){
 			//if proposed vtx is not terminal the length of its edge muse be added
-			double additionalValue = getAdditionalValue(children.get(i).getData());
 	    	double totalCost = children.get(i).getData().totalExpectedCost;
 	    	int totalIteration = children.get(i).getData().visitsMade;
-			double averageCost = totalCost/totalIteration + additionalValue;
+			double averageCost = totalCost/totalIteration;
 			LOG.debug("average cost for [" + children.get(i).getData().vtx 
 					+"] is : "+ averageCost + 
 					" visits made:" + totalIteration);
@@ -122,16 +124,7 @@ public class UctPrunning extends MonteCarloPrunningTreeSearch implements Default
 		}
 		return result;
 	}
-	
-	private double getAdditionalValue(VtxDTO data) {
-		// return edge weight from data.vtx to its parent.data.vtx
-		if(data.vtx == this.graph.getTerminalVtx()){
-			return 0;
-		}
-		StochasticWeightedEdge edge = this.getGraph().getEdge(this.root.getData().vtx, data.vtx);
-		return this.getGraph().getEdgeWeight(edge);
-	}
-	
+
 	@Override
 	public TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> node) {
 		if(node.isLeafNode()){
@@ -152,18 +145,56 @@ public class UctPrunning extends MonteCarloPrunningTreeSearch implements Default
 		return node.getChildren().get(maxValueIndex);
 	}
 	
-	protected double evaluateUctFormula(TreeNode<VtxDTO> child) {
+//	protected double evaluateUctFormula(TreeNode<VtxDTO> child) {
+//		if(child.getData().visitsMade == 0){
+//			return Double.MAX_VALUE;
+//		}
+//		double result = 0;
+//		double bias = child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade;
+////		bias /= 5;
+////		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
+//		result -= child.getData().totalExpectedCost/child.getData().visitsMade;
+//		result += bias*Math.sqrt(Math.log10(child.getParent().getData().visitsMade)/child.getData().visitsMade);
+//		return result;
+//	}
+	
+	private double evaluateUctFormula(TreeNode<VtxDTO> child) {
 		if(child.getData().visitsMade == 0){
 			return Double.MAX_VALUE;
 		}
 		double result = 0;
-		double bias = child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade;
-//		bias /= 5;
+		double totalExpectedCost = child.getData().totalExpectedCost 
+				+ 20 * getDijkstraPathWeight(child.getData().vtx);
+		double totalVisits = child.getData().visitsMade + 20;
+		double bias = (child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade)*10;
 //		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
-		result -= child.getData().totalExpectedCost/child.getData().visitsMade;
-		result += bias*Math.sqrt(Math.log10(child.getParent().getData().visitsMade)/child.getData().visitsMade);
+		result -= totalExpectedCost/totalVisits;
+		result += bias*Math.sqrt(Math.log(child.getParent().getData().visitsMade)/child.getData().visitsMade);
+//		System.out.println(child.getData().vtx + ", avg=" + totalExpectedCost/totalVisits +" ,UCT value=" + result );
 		return result;
 	}
+	private double getDijkstraPathWeight(Vertex start){
+		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
+		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
+		dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(this.getGraph());
+		shortestPath = dsp.getPath(start, this.getGraph().getTerminalVtx());
+		return shortestPath.getWeight();
+	}
 	
+	public int getNumberOfRollouts() {
+		return numberOfRollouts;
+	}
+
+	public int getNumberOfIterations() {
+		return numberOfIteration;
+	}
+
+	public void setNumberOfRollouts(int n) {
+		this.numberOfRollouts = n;
+	}
+
+	public void setNumberOfIterations(int i) {
+		this.numberOfIteration = i;
+	}
 
 }

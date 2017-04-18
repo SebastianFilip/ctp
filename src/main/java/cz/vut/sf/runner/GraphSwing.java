@@ -1,4 +1,4 @@
-package cz.vut.sf.main;
+package cz.vut.sf.runner;
 
 import java.awt.Color;
 import java.awt.Point;
@@ -30,7 +30,10 @@ public class GraphSwing extends JFrame{
 	final static int screenX = 1366;
 	final static int screenY = 768;
 	public GraphSwing(StochasticWeightedGraph gSource, List<Point> pointList){
-		super("Graph topology");
+		super();
+		String title = "Graph topology";
+		title += pointList.isEmpty() ? "" : ", graph size = " + pointList.size();
+		this.setTitle(title);
 		final mxGraph g = new mxGraph(){
 			@Override
 	        public boolean isCellSelectable(Object cell) {
@@ -257,7 +260,7 @@ public class GraphSwing extends JFrame{
 	
 	public static void displayGraph(StochasticWeightedGraph gSource, List<Point> pointList){
 		GraphSwing frame = new GraphSwing(gSource, pointList);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		frame.setSize(screenX,screenY);
 		frame.setVisible(true);
 	}

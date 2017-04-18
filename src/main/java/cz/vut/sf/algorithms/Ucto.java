@@ -17,12 +17,12 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public class Ucto extends DefaultUctAlgorithm{
+public class Ucto extends AbstractUctAlgorithm{
 	public int additionalFakeRollouts = 10;
 	
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.debug("Starting UCTB, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
+		LOG.info("Starting UCTB, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
 		Result result = super.solve(ctp, agent);
 		result.msg = "UCTO";
 		return result;
@@ -116,7 +116,7 @@ public class Ucto extends DefaultUctAlgorithm{
 		return result;
 	}
 
-	protected void simulateTravelsals(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
 		int currentRollout = 0;
 		do{
 			currentRollout ++;
@@ -143,5 +143,21 @@ public class Ucto extends DefaultUctAlgorithm{
 			simulator.totalCost += travellingAgent.getTotalCost();
 			simulator.totalIterations ++;
 		}while(currentRollout < numberOfRollouts);
+	}
+
+	public int getNumberOfRollouts() {
+		return numberOfRollouts;
+	}
+
+	public int getNumberOfIterations() {
+		return numberOfIteration;
+	}
+
+	public void setNumberOfRollouts(int n) {
+		this.numberOfRollouts = n;
+	}
+
+	public void setNumberOfIterations(int i) {
+		this.numberOfIteration = i;
 	}
 }

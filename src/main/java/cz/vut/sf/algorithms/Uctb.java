@@ -11,7 +11,7 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public class Uctb extends DefaultUctAlgorithm{
+public class Uctb extends AbstractUctAlgorithm{
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		LOG.info("Starting UCTB, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
@@ -69,7 +69,7 @@ public class Uctb extends DefaultUctAlgorithm{
 		}while(currentRollout < numberOfRollouts);
 	}
 	
-	protected void simulateTravelsals(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
 		int currentRollout = 0;
 		do{
 			currentRollout ++;
@@ -97,5 +97,20 @@ public class Uctb extends DefaultUctAlgorithm{
 			simulator.totalIterations ++;
 		}while(currentRollout < numberOfRollouts);
 	}
+	
+	public int getNumberOfRollouts() {
+		return numberOfRollouts;
+	}
 
+	public int getNumberOfIterations() {
+		return numberOfIteration;
+	}
+
+	public void setNumberOfRollouts(int n) {
+		this.numberOfRollouts = n;
+	}
+
+	public void setNumberOfIterations(int i) {
+		this.numberOfIteration = i;
+	}
 }

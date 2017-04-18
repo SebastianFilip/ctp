@@ -1,5 +1,7 @@
-package cz.vut.sf.ctp;
+package cz.vut.sf.algorithms;
 
+import cz.vut.sf.ctp.Simulator;
+import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.TreeNode;
 
 public interface RolloutAble {
