@@ -3,6 +3,9 @@ package cz.vut.sf.runner;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.lf5.viewer.configure.ConfigurationManager;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
@@ -48,13 +51,7 @@ public class CtpApp extends CtpAppConstants {
     	List<Result> results = algorithmRunner(ctp, algorithmsToBeMade, numberOfRuns);
     	
     	//Print results
-    	printResult(results);
-//    	//Optimal solution print s->t
-//    	LOG.info("starting DIJKSTRA");
-//    	ctp.g.removeAllBlockedEdges();
-//    	DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(ctp.g);
-//    	GraphPath<Vertex, StochasticWeightedEdge> shortestPath = dsp.getPath(s, t);
-//    	LOG.info("DIJKSTRA cost: "+ shortestPath.getWeight() +" through: "+shortestPath.getVertexList().toString());
+    	//printResult(results);
     }
     
     private static void printResult(List<Result> results){
@@ -66,9 +63,17 @@ public class CtpApp extends CtpAppConstants {
     	}
     }
     
-    private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms, int repeater){
+    private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms, final int numberOfRuns){
     	List<Result> results = new ArrayList<Result>();
+    	Level lvl = prop.getProperty(PropKeys.LOG_LEVEL.name()).contains("INFO") ? Level.INFO : Level.DEBUG;
+    	LOG.setLevel(lvl);
+    	int repeater = numberOfRuns;
     	while(repeater>0){
+    		String logMsg = "--------Starting run #" + (numberOfRuns - repeater + 1) + "--------";
+    		String logMsgSeparator = new String(new char[logMsg.length()]).replace('\0', '-');
+    		LOG.info(logMsgSeparator);
+    		LOG.info(logMsg);
+    		LOG.info(logMsgSeparator);
     		results.addAll(runAlgorithms(ctp, algorithms));
     		repeater--;
     		// for each repetition new instance of graph
@@ -81,12 +86,7 @@ public class CtpApp extends CtpAppConstants {
 		List<Result> result = new ArrayList<Result>();
 		try {
 			for(AlgNames algorithm : algorithms){
-				//make clone of graph instance so for upcoming algorithms same instance is used
 				StochasticWeightedGraph graphClone = (StochasticWeightedGraph) ctp.g.clone();
-				
-				//TEST
-//				ctp.g = ctp.g.doRollout();
-				
 				Result r = null;
 				switch (algorithm){
 					case DIJKSTRA:
@@ -121,10 +121,18 @@ public class CtpApp extends CtpAppConstants {
 						break;
 					case UCTB:
 						Uctb uctb = new Uctb();
+						uctb.setNumberOfRollouts(1);
+						int n = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
+						uctb.setNumberOfIterations(n);
 						r = uctb.solve(ctp, new Agent(ctp.s));
 						break;
 					case UCTO:
 						Ucto ucto = new Ucto();
+						ucto.setNumberOfRollouts(1);
+						int n1 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTO.name()));
+						int m1 = Integer.parseInt(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name()));
+						ucto.setNumberOfIterations(n1);
+						ucto.setAdditionalFakeRollouts(m1);
 						r = ucto.solve(ctp, new Agent(ctp.s));
 						break;
 					case UCTB2:
@@ -133,6 +141,10 @@ public class CtpApp extends CtpAppConstants {
 						break;
 					case UCTP:
 						UctPrunning uctp = new UctPrunning();
+						int nr = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTP.name()));
+						int ni = Integer.parseInt(prop.getProperty(PropKeys.ITERATIONS_UCTP.name()));
+						uctp.setNumberOfRollouts(nr);
+						uctp.setNumberOfIterations(ni);
 						r = uctp.solve(ctp, new Agent(ctp.s));
 						break;
 					}

@@ -18,11 +18,11 @@ import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
 public class Ucto extends AbstractUctAlgorithm{
-	public int additionalFakeRollouts = 10;
+	private int additionalFakeRollouts = 10;
 	
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTB, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
+		LOG.info("Starting UCTO, total rollouts = " + numberOfIteration + ", additional rollouts = " + additionalFakeRollouts);
 		Result result = super.solve(ctp, agent);
 		result.msg = "UCTO";
 		return result;
@@ -159,5 +159,9 @@ public class Ucto extends AbstractUctAlgorithm{
 
 	public void setNumberOfIterations(int i) {
 		this.numberOfIteration = i;
+	}
+	
+	public void setAdditionalFakeRollouts(int m){
+		this.additionalFakeRollouts = m;
 	}
 }

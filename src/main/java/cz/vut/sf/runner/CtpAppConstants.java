@@ -21,6 +21,13 @@ public class CtpAppConstants extends LoggerClass {
 		LOG_LEVEL,
 		ALGORITHMS_RUN,
 		SOURCE_FILE,
+		ROLLOUTS_HOP,
+		ROLLOUTS_ORO,
+		ROLLOUTS_UCTB,
+		ROLLOUTS_UCTO,
+		ROLLOUTS_UCTP,
+		ITERATIONS_UCTP,
+		ADDITIONAL_ROLLOUTS_UCTO,
 	}
 
 	public static boolean checkProperties(){

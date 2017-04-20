@@ -14,7 +14,7 @@ import cz.vut.sf.graph.Vertex;
 public class Uctb extends AbstractUctAlgorithm{
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTB, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
+		LOG.info("Starting UCTB, total rollouts = " + numberOfIteration);
 		Result result = super.solve(ctp, agent);
 		result.msg = "UCTB";
 		return result;

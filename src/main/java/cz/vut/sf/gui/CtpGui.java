@@ -1,26 +1,21 @@
 package cz.vut.sf.gui;
 
 import java.awt.EventQueue;
-import java.awt.Point;
 
+import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
-
-import java.awt.BorderLayout;
-
-import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JButton;
 import javax.swing.JRadioButton;
+import javax.swing.JTextArea;
 import javax.swing.LayoutStyle.ComponentPlacement;
-import javax.swing.JTree;
-import javax.swing.JToggleButton;
-import javax.swing.JTable;
 import javax.swing.JFileChooser;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
@@ -32,26 +27,31 @@ import cz.vut.sf.parsers.ParsedDTO;
 import cz.vut.sf.runner.CtpApp;
 import cz.vut.sf.runner.CtpAppConstants;
 import cz.vut.sf.runner.GraphSwing;
-import cz.vut.sf.runner.CtpAppConstants.AlgNames;
-import cz.vut.sf.runner.CtpAppConstants.PropKeys;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
-import java.awt.GridLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
 
-public class Gui extends CtpAppConstants{
+import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.border.Border;
+
+import org.apache.log4j.LogManager;
+
+import java.awt.Font;
+
+public class CtpGui extends CtpAppConstants{
 	private JFrame frmCanadianTravellerProblem;
 	private JTextField filePath;
 	private JTextField txtVisualiserWidth;
@@ -67,13 +67,16 @@ public class Gui extends CtpAppConstants{
 	public static JRadioButton rdbtnUCTO;
 	public static JRadioButton rdbtnUCTP;
 	public static JLabel lblStatus;
-	private JTextField textField;
-	private JTextField textField_1;
-	private JTextField textField_2;
-	private JTextField textField_3;
-	private JTextField textField_4;
-	private JTextField textField_5;
-	private JTextField textField_6;
+	private JTextField textFieldHOP;
+	private JTextField textFieldORO;
+	private JTextField textFieldUCTB;
+	private JTextField textFieldUCTO;
+	private JTextField textFieldUCTP;
+	private JTextField textFieldUCTO_M;
+	private JTextField textFieldUCTP_Ni;
+	private JTextArea textAreaConsole;
+	private JScrollPane scrollConsole;
+
 
 	/**
 	 * Launch the application.
@@ -89,6 +92,13 @@ public class Gui extends CtpAppConstants{
 				prop.setProperty(PropKeys.LOG_LEVEL.name(), "INFO");
 				prop.setProperty(PropKeys.ALGORITHMS_RUN.name(), "1");
 				prop.setProperty(PropKeys.SOURCE_FILE.name(), resourcePath + SEPARATOR + "eyerich.ctp");
+				prop.setProperty(PropKeys.ROLLOUTS_HOP.name(), "100");
+				prop.setProperty(PropKeys.ROLLOUTS_ORO.name(), "100");
+				prop.setProperty(PropKeys.ROLLOUTS_UCTB.name(), "100");
+				prop.setProperty(PropKeys.ROLLOUTS_UCTO.name(), "100");
+				prop.setProperty(PropKeys.ROLLOUTS_UCTP.name(), "100");
+				prop.setProperty(PropKeys.ITERATIONS_UCTP.name(), "100");
+				prop.setProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name(), "20");
 				prop.store(fos, "Application Settings");
 				fos.close();
 			}
@@ -99,7 +109,7 @@ public class Gui extends CtpAppConstants{
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					Gui window = new Gui();
+					CtpGui window = new CtpGui();
 					window.frmCanadianTravellerProblem.setVisible(true);
 					window.frmCanadianTravellerProblem.pack();
 				} catch (Exception e) {
@@ -164,7 +174,7 @@ public class Gui extends CtpAppConstants{
 	/**
 	 * Create the application.
 	 */
-	public Gui() {
+	public CtpGui() {
 		initialize();
 	}
 
@@ -174,7 +184,8 @@ public class Gui extends CtpAppConstants{
 	private void initialize() {
 		frmCanadianTravellerProblem = new JFrame();
 		frmCanadianTravellerProblem.setTitle("Canadian Traveller Problem Application");
-		frmCanadianTravellerProblem.setBounds(100, 100, 781, 492);
+		frmCanadianTravellerProblem.setBounds(100, 100, 800, 522);
+		frmCanadianTravellerProblem.setMinimumSize(new Dimension(800,522));
 		frmCanadianTravellerProblem.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
@@ -239,6 +250,15 @@ public class Gui extends CtpAppConstants{
 			}
 		});
 		
+		textAreaConsole = new JTextArea();
+		textAreaConsole.setFont(new Font("Courier New", Font.PLAIN, 12));
+		StatusMessageAppender appender = new StatusMessageAppender(textAreaConsole);
+		LogManager.getRootLogger().addAppender(appender);
+		
+		scrollConsole = new JScrollPane(textAreaConsole, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+		
+		JLabel lblNewLabel_1 = new JLabel("Console Output");
+		lblNewLabel_1.setFont(new Font("Tahoma", Font.BOLD, 13));
 		
 		GroupLayout gl_panel = new GroupLayout(panel);
 		gl_panel.setHorizontalGroup(
@@ -246,20 +266,25 @@ public class Gui extends CtpAppConstants{
 				.addGroup(gl_panel.createSequentialGroup()
 					.addContainerGap()
 					.addGroup(gl_panel.createParallelGroup(Alignment.LEADING)
+						.addComponent(scrollConsole, GroupLayout.DEFAULT_SIZE, 740, Short.MAX_VALUE)
+						.addComponent(lblStatus, GroupLayout.PREFERRED_SIZE, 92, GroupLayout.PREFERRED_SIZE)
 						.addGroup(gl_panel.createSequentialGroup()
 							.addComponent(lblNewLabel)
 							.addPreferredGap(ComponentPlacement.RELATED)
-							.addComponent(filePath, GroupLayout.PREFERRED_SIZE, 283, GroupLayout.PREFERRED_SIZE)
-							.addGap(6)
+							.addComponent(filePath, GroupLayout.DEFAULT_SIZE, 435, Short.MAX_VALUE)
+							.addGap(18)
 							.addComponent(openFilePathBtn)
 							.addPreferredGap(ComponentPlacement.RELATED)
-							.addComponent(showGraphBtn))
-						.addComponent(btnRun)
-						.addComponent(lblStatus, GroupLayout.PREFERRED_SIZE, 92, GroupLayout.PREFERRED_SIZE))
-					.addContainerGap(196, Short.MAX_VALUE))
+							.addComponent(showGraphBtn)
+							.addGap(16))
+						.addGroup(gl_panel.createSequentialGroup()
+							.addComponent(btnRun)
+							.addGap(241)
+							.addComponent(lblNewLabel_1, GroupLayout.PREFERRED_SIZE, 111, GroupLayout.PREFERRED_SIZE)))
+					.addContainerGap())
 		);
 		gl_panel.setVerticalGroup(
-			gl_panel.createParallelGroup(Alignment.TRAILING)
+			gl_panel.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_panel.createSequentialGroup()
 					.addContainerGap()
 					.addGroup(gl_panel.createParallelGroup(Alignment.BASELINE)
@@ -270,14 +295,18 @@ public class Gui extends CtpAppConstants{
 					.addGap(7)
 					.addComponent(lblStatus)
 					.addPreferredGap(ComponentPlacement.UNRELATED)
-					.addComponent(btnRun)
-					.addContainerGap(298, Short.MAX_VALUE))
+					.addGroup(gl_panel.createParallelGroup(Alignment.BASELINE)
+						.addComponent(btnRun, GroupLayout.PREFERRED_SIZE, 42, GroupLayout.PREFERRED_SIZE)
+						.addComponent(lblNewLabel_1, GroupLayout.PREFERRED_SIZE, 28, GroupLayout.PREFERRED_SIZE))
+					.addPreferredGap(ComponentPlacement.RELATED)
+					.addComponent(scrollConsole, GroupLayout.DEFAULT_SIZE, 301, Short.MAX_VALUE)
+					.addGap(28))
 		);
 		panel.setLayout(gl_panel);
 		
 		ButtonGroup bgLogLevel = new ButtonGroup(); 
 		
-		final String lblAlgorithmsRunText = "Agorithms are going to be run x time(s).";
+		final String lblAlgorithmsRunText = "   Agorithms are going to be run x time(s).";
 		
 		JPanel panel_2 = new JPanel();
 		tabbedPane.addTab("App Settings", null, panel_2, null);
@@ -287,34 +316,16 @@ public class Gui extends CtpAppConstants{
 		JLabel lblVisualiserWidth = new JLabel("Visualiser width:");
 		
 		txtVisualiserWidth = new JTextField();
-		txtVisualiserWidth.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				prop.setProperty(PropKeys.VISUALISER_WIDTH.name(), txtVisualiserWidth.getText());
-				try {
-					saveProp();
-				} catch (Throwable err) {
-					err.printStackTrace();
-				}
-			}
-		});
-		txtVisualiserWidth.setColumns(10);
+		txtVisualiserWidth.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_WIDTH, txtVisualiserWidth));
 		txtVisualiserWidth.setText(prop.getProperty(PropKeys.VISUALISER_WIDTH.name()));
+		txtVisualiserWidth.setColumns(10);
 		
 		JLabel lblVisualiserHeight = new JLabel("Visualiser height:");
 		
 		txtVisualiserHeight = new JTextField();
-		txtVisualiserHeight.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				prop.setProperty(PropKeys.VISUALISER_HEIGHT.name(), txtVisualiserHeight.getText());
-				try {
-					saveProp();
-				} catch (Throwable err) {
-					err.printStackTrace();
-				}
-			}
-		});
-		txtVisualiserHeight.setColumns(10);
+		txtVisualiserHeight.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_HEIGHT, txtVisualiserHeight));
 		txtVisualiserHeight.setText(prop.getProperty(PropKeys.VISUALISER_HEIGHT.name()));
+		txtVisualiserHeight.setColumns(10);
 		
 		JRadioButton rdbtnInfo = new JRadioButton("INFO",true);
 		JRadioButton rdbtnDebug = new JRadioButton("DEBUG", false);
@@ -370,11 +381,22 @@ public class Gui extends CtpAppConstants{
 		JPanel panel_1 = new JPanel();
 		tabbedPane.addTab("Algorithms", null, panel_1, null);
 		GridBagLayout gbl_panel_1 = new GridBagLayout();
-		gbl_panel_1.columnWidths = new int[]{175, 44, 79, 138, 20, 138, 138, 138, 138, 138, 0};
-		gbl_panel_1.rowHeights = new int[]{19, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 0};
-		gbl_panel_1.columnWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
-		gbl_panel_1.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+		gbl_panel_1.columnWidths = new int[]{175, 44, 79, 105, 20, 138, 105, 0};
+		gbl_panel_1.rowHeights = new int[]{33, 38, 38, 38, 38, 38, 38, 38, 38, 38, 0, 38, 12, 0};
+		gbl_panel_1.columnWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+		gbl_panel_1.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
 		panel_1.setLayout(gbl_panel_1);
+		
+		JLabel lblAlgorithms = new JLabel("Algorithms");
+		lblAlgorithms.setFont(new Font("Tahoma", Font.BOLD, 13));
+		lblAlgorithms.setBackground(UIManager.getColor("Button.shadow"));
+		lblAlgorithms.setVerticalAlignment(SwingConstants.BOTTOM);
+		GridBagConstraints gbc_lblAlgorithms = new GridBagConstraints();
+		gbc_lblAlgorithms.fill = GridBagConstraints.VERTICAL;
+		gbc_lblAlgorithms.insets = new Insets(0, 0, 5, 5);
+		gbc_lblAlgorithms.gridx = 0;
+		gbc_lblAlgorithms.gridy = 0;
+		panel_1.add(lblAlgorithms, gbc_lblAlgorithms);
 		
 		JLabel lblDijkstraShortestPath = new JLabel("   Dijkstra shortest path");
 		GridBagConstraints gbc_lblDijkstraShortestPath = new GridBagConstraints();
@@ -428,34 +450,10 @@ public class Gui extends CtpAppConstants{
 		JLabel label_4 = new JLabel("");
 		GridBagConstraints gbc_label_4 = new GridBagConstraints();
 		gbc_label_4.fill = GridBagConstraints.BOTH;
-		gbc_label_4.insets = new Insets(0, 0, 5, 5);
+		gbc_label_4.insets = new Insets(0, 0, 5, 0);
 		gbc_label_4.gridx = 6;
 		gbc_label_4.gridy = 1;
 		panel_1.add(label_4, gbc_label_4);
-		
-		JLabel label_5 = new JLabel("");
-		GridBagConstraints gbc_label_5 = new GridBagConstraints();
-		gbc_label_5.fill = GridBagConstraints.BOTH;
-		gbc_label_5.insets = new Insets(0, 0, 5, 5);
-		gbc_label_5.gridx = 7;
-		gbc_label_5.gridy = 1;
-		panel_1.add(label_5, gbc_label_5);
-		
-		JLabel label_6 = new JLabel("");
-		GridBagConstraints gbc_label_6 = new GridBagConstraints();
-		gbc_label_6.fill = GridBagConstraints.BOTH;
-		gbc_label_6.insets = new Insets(0, 0, 5, 5);
-		gbc_label_6.gridx = 8;
-		gbc_label_6.gridy = 1;
-		panel_1.add(label_6, gbc_label_6);
-		
-		JLabel label_7 = new JLabel("");
-		GridBagConstraints gbc_label_7 = new GridBagConstraints();
-		gbc_label_7.fill = GridBagConstraints.BOTH;
-		gbc_label_7.insets = new Insets(0, 0, 5, 0);
-		gbc_label_7.gridx = 9;
-		gbc_label_7.gridy = 1;
-		panel_1.add(label_7, gbc_label_7);
 		
 		JLabel lblGreedyAlgorithm = new JLabel("   Greedy algorithm");
 		GridBagConstraints gbc_lblGreedyAlgorithm = new GridBagConstraints();
@@ -508,34 +506,10 @@ public class Gui extends CtpAppConstants{
 		JLabel label_12 = new JLabel("");
 		GridBagConstraints gbc_label_12 = new GridBagConstraints();
 		gbc_label_12.fill = GridBagConstraints.BOTH;
-		gbc_label_12.insets = new Insets(0, 0, 5, 5);
+		gbc_label_12.insets = new Insets(0, 0, 5, 0);
 		gbc_label_12.gridx = 6;
 		gbc_label_12.gridy = 2;
 		panel_1.add(label_12, gbc_label_12);
-		
-		JLabel label_13 = new JLabel("");
-		GridBagConstraints gbc_label_13 = new GridBagConstraints();
-		gbc_label_13.fill = GridBagConstraints.BOTH;
-		gbc_label_13.insets = new Insets(0, 0, 5, 5);
-		gbc_label_13.gridx = 7;
-		gbc_label_13.gridy = 2;
-		panel_1.add(label_13, gbc_label_13);
-		
-		JLabel label_14 = new JLabel("");
-		GridBagConstraints gbc_label_14 = new GridBagConstraints();
-		gbc_label_14.fill = GridBagConstraints.BOTH;
-		gbc_label_14.insets = new Insets(0, 0, 5, 5);
-		gbc_label_14.gridx = 8;
-		gbc_label_14.gridy = 2;
-		panel_1.add(label_14, gbc_label_14);
-		
-		JLabel label_15 = new JLabel("");
-		GridBagConstraints gbc_label_15 = new GridBagConstraints();
-		gbc_label_15.fill = GridBagConstraints.BOTH;
-		gbc_label_15.insets = new Insets(0, 0, 5, 0);
-		gbc_label_15.gridx = 9;
-		gbc_label_15.gridy = 2;
-		panel_1.add(label_15, gbc_label_15);
 		
 		JLabel lblRepo = new JLabel("   Reposition algorithm");
 		GridBagConstraints gbc_lblRepo = new GridBagConstraints();
@@ -588,34 +562,10 @@ public class Gui extends CtpAppConstants{
 		JLabel label_20 = new JLabel("");
 		GridBagConstraints gbc_label_20 = new GridBagConstraints();
 		gbc_label_20.fill = GridBagConstraints.BOTH;
-		gbc_label_20.insets = new Insets(0, 0, 5, 5);
+		gbc_label_20.insets = new Insets(0, 0, 5, 0);
 		gbc_label_20.gridx = 6;
 		gbc_label_20.gridy = 3;
 		panel_1.add(label_20, gbc_label_20);
-		
-		JLabel label_21 = new JLabel("");
-		GridBagConstraints gbc_label_21 = new GridBagConstraints();
-		gbc_label_21.fill = GridBagConstraints.BOTH;
-		gbc_label_21.insets = new Insets(0, 0, 5, 5);
-		gbc_label_21.gridx = 7;
-		gbc_label_21.gridy = 3;
-		panel_1.add(label_21, gbc_label_21);
-		
-		JLabel label_22 = new JLabel("");
-		GridBagConstraints gbc_label_22 = new GridBagConstraints();
-		gbc_label_22.fill = GridBagConstraints.BOTH;
-		gbc_label_22.insets = new Insets(0, 0, 5, 5);
-		gbc_label_22.gridx = 8;
-		gbc_label_22.gridy = 3;
-		panel_1.add(label_22, gbc_label_22);
-		
-		JLabel label_23 = new JLabel("");
-		GridBagConstraints gbc_label_23 = new GridBagConstraints();
-		gbc_label_23.fill = GridBagConstraints.BOTH;
-		gbc_label_23.insets = new Insets(0, 0, 5, 0);
-		gbc_label_23.gridx = 9;
-		gbc_label_23.gridy = 3;
-		panel_1.add(label_23, gbc_label_23);
 		
 		JLabel lblComparisionAlgorithm = new JLabel("   Comparision algorithm");
 		GridBagConstraints gbc_lblComparisionAlgorithm = new GridBagConstraints();
@@ -668,34 +618,10 @@ public class Gui extends CtpAppConstants{
 		JLabel label_28 = new JLabel("");
 		GridBagConstraints gbc_label_28 = new GridBagConstraints();
 		gbc_label_28.fill = GridBagConstraints.BOTH;
-		gbc_label_28.insets = new Insets(0, 0, 5, 5);
+		gbc_label_28.insets = new Insets(0, 0, 5, 0);
 		gbc_label_28.gridx = 6;
 		gbc_label_28.gridy = 4;
 		panel_1.add(label_28, gbc_label_28);
-		
-		JLabel label_29 = new JLabel("");
-		GridBagConstraints gbc_label_29 = new GridBagConstraints();
-		gbc_label_29.fill = GridBagConstraints.BOTH;
-		gbc_label_29.insets = new Insets(0, 0, 5, 5);
-		gbc_label_29.gridx = 7;
-		gbc_label_29.gridy = 4;
-		panel_1.add(label_29, gbc_label_29);
-		
-		JLabel label_30 = new JLabel("");
-		GridBagConstraints gbc_label_30 = new GridBagConstraints();
-		gbc_label_30.fill = GridBagConstraints.BOTH;
-		gbc_label_30.insets = new Insets(0, 0, 5, 5);
-		gbc_label_30.gridx = 8;
-		gbc_label_30.gridy = 4;
-		panel_1.add(label_30, gbc_label_30);
-		
-		JLabel label_31 = new JLabel("");
-		GridBagConstraints gbc_label_31 = new GridBagConstraints();
-		gbc_label_31.fill = GridBagConstraints.BOTH;
-		gbc_label_31.insets = new Insets(0, 0, 5, 0);
-		gbc_label_31.gridx = 9;
-		gbc_label_31.gridy = 4;
-		panel_1.add(label_31, gbc_label_31);
 		
 		JLabel lblHindsightOptimizationhop = new JLabel("   Hindsight Optimization (HOP)");
 		GridBagConstraints gbc_lblHindsightOptimizationhop = new GridBagConstraints();
@@ -713,7 +639,7 @@ public class Gui extends CtpAppConstants{
 		gbc_rdbtnHOP.gridy = 5;
 		panel_1.add(rdbtnHOP, gbc_rdbtnHOP);
 		
-		JLabel lblRollouts = new JLabel("Rollouts:");
+		JLabel lblRollouts = new JLabel("   Rollouts:");
 		GridBagConstraints gbc_lblRollouts = new GridBagConstraints();
 		gbc_lblRollouts.fill = GridBagConstraints.BOTH;
 		gbc_lblRollouts.insets = new Insets(0, 0, 5, 5);
@@ -721,14 +647,17 @@ public class Gui extends CtpAppConstants{
 		gbc_lblRollouts.gridy = 5;
 		panel_1.add(lblRollouts, gbc_lblRollouts);
 		
-		textField = new JTextField();
-		textField.setColumns(10);
-		GridBagConstraints gbc_textField = new GridBagConstraints();
-		gbc_textField.fill = GridBagConstraints.BOTH;
-		gbc_textField.insets = new Insets(0, 0, 5, 5);
-		gbc_textField.gridx = 3;
-		gbc_textField.gridy = 5;
-		panel_1.add(textField, gbc_textField);
+		textFieldHOP = new JTextField();
+		textFieldHOP.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_HOP, textFieldHOP));
+		
+		textFieldHOP.setText(prop.getProperty(PropKeys.ROLLOUTS_HOP.name()));
+		textFieldHOP.setColumns(10);
+		GridBagConstraints gbc_textFieldHOP = new GridBagConstraints();
+		gbc_textFieldHOP.fill = GridBagConstraints.BOTH;
+		gbc_textFieldHOP.insets = new Insets(0, 0, 5, 5);
+		gbc_textFieldHOP.gridx = 3;
+		gbc_textFieldHOP.gridy = 5;
+		panel_1.add(textFieldHOP, gbc_textFieldHOP);
 		
 		JLabel label_32 = new JLabel("");
 		GridBagConstraints gbc_label_32 = new GridBagConstraints();
@@ -749,34 +678,10 @@ public class Gui extends CtpAppConstants{
 		JLabel label_34 = new JLabel("");
 		GridBagConstraints gbc_label_34 = new GridBagConstraints();
 		gbc_label_34.fill = GridBagConstraints.BOTH;
-		gbc_label_34.insets = new Insets(0, 0, 5, 5);
+		gbc_label_34.insets = new Insets(0, 0, 5, 0);
 		gbc_label_34.gridx = 6;
 		gbc_label_34.gridy = 5;
 		panel_1.add(label_34, gbc_label_34);
-		
-		JLabel label_35 = new JLabel("");
-		GridBagConstraints gbc_label_35 = new GridBagConstraints();
-		gbc_label_35.fill = GridBagConstraints.BOTH;
-		gbc_label_35.insets = new Insets(0, 0, 5, 5);
-		gbc_label_35.gridx = 7;
-		gbc_label_35.gridy = 5;
-		panel_1.add(label_35, gbc_label_35);
-		
-		JLabel label_36 = new JLabel("");
-		GridBagConstraints gbc_label_36 = new GridBagConstraints();
-		gbc_label_36.fill = GridBagConstraints.BOTH;
-		gbc_label_36.insets = new Insets(0, 0, 5, 5);
-		gbc_label_36.gridx = 8;
-		gbc_label_36.gridy = 5;
-		panel_1.add(label_36, gbc_label_36);
-		
-		JLabel label_37 = new JLabel("");
-		GridBagConstraints gbc_label_37 = new GridBagConstraints();
-		gbc_label_37.fill = GridBagConstraints.BOTH;
-		gbc_label_37.insets = new Insets(0, 0, 5, 0);
-		gbc_label_37.gridx = 9;
-		gbc_label_37.gridy = 5;
-		panel_1.add(label_37, gbc_label_37);
 		
 		JLabel lblOptimisticRolloutoro = new JLabel("   Optimistic Rollout (ORO)");
 		GridBagConstraints gbc_lblOptimisticRolloutoro = new GridBagConstraints();
@@ -794,7 +699,7 @@ public class Gui extends CtpAppConstants{
 		gbc_rdbtnORO.gridy = 6;
 		panel_1.add(rdbtnORO, gbc_rdbtnORO);
 		
-		JLabel lblRollouts1 = new JLabel("Rollouts:");
+		JLabel lblRollouts1 = new JLabel("   Rollouts:");
 		GridBagConstraints gbc_lblRollouts1 = new GridBagConstraints();
 		gbc_lblRollouts1.fill = GridBagConstraints.BOTH;
 		gbc_lblRollouts1.insets = new Insets(0, 0, 5, 5);
@@ -802,14 +707,16 @@ public class Gui extends CtpAppConstants{
 		gbc_lblRollouts1.gridy = 6;
 		panel_1.add(lblRollouts1, gbc_lblRollouts1);
 		
-		textField_1 = new JTextField();
-		textField_1.setColumns(10);
-		GridBagConstraints gbc_textField_1 = new GridBagConstraints();
-		gbc_textField_1.fill = GridBagConstraints.BOTH;
-		gbc_textField_1.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_1.gridx = 3;
-		gbc_textField_1.gridy = 6;
-		panel_1.add(textField_1, gbc_textField_1);
+		textFieldORO = new JTextField();
+		textFieldORO.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_ORO, textFieldORO));
+		textFieldORO.setText(prop.getProperty(PropKeys.ROLLOUTS_ORO.name()));
+		textFieldORO.setColumns(10);
+		GridBagConstraints gbc_textFieldORO = new GridBagConstraints();
+		gbc_textFieldORO.fill = GridBagConstraints.BOTH;
+		gbc_textFieldORO.insets = new Insets(0, 0, 5, 5);
+		gbc_textFieldORO.gridx = 3;
+		gbc_textFieldORO.gridy = 6;
+		panel_1.add(textFieldORO, gbc_textFieldORO);
 		
 		JLabel label_38 = new JLabel("");
 		GridBagConstraints gbc_label_38 = new GridBagConstraints();
@@ -830,34 +737,10 @@ public class Gui extends CtpAppConstants{
 		JLabel label_40 = new JLabel("");
 		GridBagConstraints gbc_label_40 = new GridBagConstraints();
 		gbc_label_40.fill = GridBagConstraints.BOTH;
-		gbc_label_40.insets = new Insets(0, 0, 5, 5);
+		gbc_label_40.insets = new Insets(0, 0, 5, 0);
 		gbc_label_40.gridx = 6;
 		gbc_label_40.gridy = 6;
 		panel_1.add(label_40, gbc_label_40);
-		
-		JLabel label_41 = new JLabel("");
-		GridBagConstraints gbc_label_41 = new GridBagConstraints();
-		gbc_label_41.fill = GridBagConstraints.BOTH;
-		gbc_label_41.insets = new Insets(0, 0, 5, 5);
-		gbc_label_41.gridx = 7;
-		gbc_label_41.gridy = 6;
-		panel_1.add(label_41, gbc_label_41);
-		
-		JLabel label_42 = new JLabel("");
-		GridBagConstraints gbc_label_42 = new GridBagConstraints();
-		gbc_label_42.fill = GridBagConstraints.BOTH;
-		gbc_label_42.insets = new Insets(0, 0, 5, 5);
-		gbc_label_42.gridx = 8;
-		gbc_label_42.gridy = 6;
-		panel_1.add(label_42, gbc_label_42);
-		
-		JLabel label_43 = new JLabel("");
-		GridBagConstraints gbc_label_43 = new GridBagConstraints();
-		gbc_label_43.fill = GridBagConstraints.BOTH;
-		gbc_label_43.insets = new Insets(0, 0, 5, 0);
-		gbc_label_43.gridx = 9;
-		gbc_label_43.gridy = 6;
-		panel_1.add(label_43, gbc_label_43);
 		
 		JLabel lblBlindUctuctb = new JLabel("   Blind UCT (UCTB)");
 		GridBagConstraints gbc_lblBlindUctuctb = new GridBagConstraints();
@@ -875,7 +758,7 @@ public class Gui extends CtpAppConstants{
 		gbc_rdbtnUCTB.gridy = 7;
 		panel_1.add(rdbtnUCTB, gbc_rdbtnUCTB);
 		
-		JLabel lblRollouts2 = new JLabel("Rollouts:");
+		JLabel lblRollouts2 = new JLabel("   Rollouts:");
 		GridBagConstraints gbc_lblRollouts2 = new GridBagConstraints();
 		gbc_lblRollouts2.fill = GridBagConstraints.BOTH;
 		gbc_lblRollouts2.insets = new Insets(0, 0, 5, 5);
@@ -883,14 +766,16 @@ public class Gui extends CtpAppConstants{
 		gbc_lblRollouts2.gridy = 7;
 		panel_1.add(lblRollouts2, gbc_lblRollouts2);
 		
-		textField_2 = new JTextField();
-		textField_2.setColumns(10);
-		GridBagConstraints gbc_textField_2 = new GridBagConstraints();
-		gbc_textField_2.fill = GridBagConstraints.BOTH;
-		gbc_textField_2.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_2.gridx = 3;
-		gbc_textField_2.gridy = 7;
-		panel_1.add(textField_2, gbc_textField_2);
+		textFieldUCTB = new JTextField();
+		textFieldUCTB.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTB, textFieldUCTB));
+		textFieldUCTB.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
+		textFieldUCTB.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTB = new GridBagConstraints();
+		gbc_textFieldUCTB.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTB.insets = new Insets(0, 0, 5, 5);
+		gbc_textFieldUCTB.gridx = 3;
+		gbc_textFieldUCTB.gridy = 7;
+		panel_1.add(textFieldUCTB, gbc_textFieldUCTB);
 		
 		JLabel label_44 = new JLabel("");
 		GridBagConstraints gbc_label_44 = new GridBagConstraints();
@@ -911,34 +796,10 @@ public class Gui extends CtpAppConstants{
 		JLabel label_46 = new JLabel("");
 		GridBagConstraints gbc_label_46 = new GridBagConstraints();
 		gbc_label_46.fill = GridBagConstraints.BOTH;
-		gbc_label_46.insets = new Insets(0, 0, 5, 5);
+		gbc_label_46.insets = new Insets(0, 0, 5, 0);
 		gbc_label_46.gridx = 6;
 		gbc_label_46.gridy = 7;
 		panel_1.add(label_46, gbc_label_46);
-		
-		JLabel label_47 = new JLabel("");
-		GridBagConstraints gbc_label_47 = new GridBagConstraints();
-		gbc_label_47.fill = GridBagConstraints.BOTH;
-		gbc_label_47.insets = new Insets(0, 0, 5, 5);
-		gbc_label_47.gridx = 7;
-		gbc_label_47.gridy = 7;
-		panel_1.add(label_47, gbc_label_47);
-		
-		JLabel label_48 = new JLabel("");
-		GridBagConstraints gbc_label_48 = new GridBagConstraints();
-		gbc_label_48.fill = GridBagConstraints.BOTH;
-		gbc_label_48.insets = new Insets(0, 0, 5, 5);
-		gbc_label_48.gridx = 8;
-		gbc_label_48.gridy = 7;
-		panel_1.add(label_48, gbc_label_48);
-		
-		JLabel label_49 = new JLabel("");
-		GridBagConstraints gbc_label_49 = new GridBagConstraints();
-		gbc_label_49.fill = GridBagConstraints.BOTH;
-		gbc_label_49.insets = new Insets(0, 0, 5, 0);
-		gbc_label_49.gridx = 9;
-		gbc_label_49.gridy = 7;
-		panel_1.add(label_49, gbc_label_49);
 		
 		JLabel lblOptimisticUctucto = new JLabel("   Optimistic UCT (UCTO)");
 		GridBagConstraints gbc_lblOptimisticUctucto = new GridBagConstraints();
@@ -956,7 +817,7 @@ public class Gui extends CtpAppConstants{
 		gbc_rdbtnUCTO.gridy = 8;
 		panel_1.add(rdbtnUCTO, gbc_rdbtnUCTO);
 		
-		JLabel lblRollouts3 = new JLabel("Rollouts:");
+		JLabel lblRollouts3 = new JLabel("   Rollouts:");
 		GridBagConstraints gbc_lblRollouts3 = new GridBagConstraints();
 		gbc_lblRollouts3.fill = GridBagConstraints.BOTH;
 		gbc_lblRollouts3.insets = new Insets(0, 0, 5, 5);
@@ -964,14 +825,16 @@ public class Gui extends CtpAppConstants{
 		gbc_lblRollouts3.gridy = 8;
 		panel_1.add(lblRollouts3, gbc_lblRollouts3);
 		
-		textField_3 = new JTextField();
-		textField_3.setColumns(10);
-		GridBagConstraints gbc_textField_3 = new GridBagConstraints();
-		gbc_textField_3.fill = GridBagConstraints.BOTH;
-		gbc_textField_3.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_3.gridx = 3;
-		gbc_textField_3.gridy = 8;
-		panel_1.add(textField_3, gbc_textField_3);
+		textFieldUCTO = new JTextField();
+		textFieldUCTO.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTO, textFieldUCTO));
+		textFieldUCTO.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTO.name()));;
+		textFieldUCTO.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTO = new GridBagConstraints();
+		gbc_textFieldUCTO.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTO.insets = new Insets(0, 0, 5, 5);
+		gbc_textFieldUCTO.gridx = 3;
+		gbc_textFieldUCTO.gridy = 8;
+		panel_1.add(textFieldUCTO, gbc_textFieldUCTO);
 		
 		JLabel label_50 = new JLabel("");
 		GridBagConstraints gbc_label_50 = new GridBagConstraints();
@@ -989,30 +852,16 @@ public class Gui extends CtpAppConstants{
 		gbc_lblAdditionalRolloutsm.gridy = 8;
 		panel_1.add(lblAdditionalRolloutsm, gbc_lblAdditionalRolloutsm);
 		
-		textField_5 = new JTextField();
-		textField_5.setColumns(10);
-		GridBagConstraints gbc_textField_5 = new GridBagConstraints();
-		gbc_textField_5.fill = GridBagConstraints.BOTH;
-		gbc_textField_5.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_5.gridx = 6;
-		gbc_textField_5.gridy = 8;
-		panel_1.add(textField_5, gbc_textField_5);
-		
-		JLabel label_52 = new JLabel("");
-		GridBagConstraints gbc_label_52 = new GridBagConstraints();
-		gbc_label_52.fill = GridBagConstraints.BOTH;
-		gbc_label_52.insets = new Insets(0, 0, 5, 5);
-		gbc_label_52.gridx = 7;
-		gbc_label_52.gridy = 8;
-		panel_1.add(label_52, gbc_label_52);
-		
-		JLabel label_53 = new JLabel("");
-		GridBagConstraints gbc_label_53 = new GridBagConstraints();
-		gbc_label_53.fill = GridBagConstraints.BOTH;
-		gbc_label_53.insets = new Insets(0, 0, 5, 5);
-		gbc_label_53.gridx = 8;
-		gbc_label_53.gridy = 8;
-		panel_1.add(label_53, gbc_label_53);
+		textFieldUCTO_M = new JTextField();
+		textFieldUCTO_M.addActionListener(new TextFieldIntegerListener(PropKeys.ADDITIONAL_ROLLOUTS_UCTO, textFieldUCTO_M));
+		textFieldUCTO_M.setText(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name()));
+		textFieldUCTO_M.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTO_M = new GridBagConstraints();
+		gbc_textFieldUCTO_M.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTO_M.insets = new Insets(0, 0, 5, 0);
+		gbc_textFieldUCTO_M.gridx = 6;
+		gbc_textFieldUCTO_M.gridy = 8;
+		panel_1.add(textFieldUCTO_M, gbc_textFieldUCTO_M);
 		
 		JLabel lblPruningUctuctp = new JLabel("   Pruning UCT (UCTP)");
 		GridBagConstraints gbc_lblPruningUctuctp = new GridBagConstraints();
@@ -1030,7 +879,7 @@ public class Gui extends CtpAppConstants{
 		gbc_rdbtnUCTP.gridy = 9;
 		panel_1.add(rdbtnUCTP, gbc_rdbtnUCTP);
 		
-		JLabel lblRollouts4 = new JLabel("Rollouts:");
+		JLabel lblRollouts4 = new JLabel("   Rollouts:");
 		GridBagConstraints gbc_lblRollouts4 = new GridBagConstraints();
 		gbc_lblRollouts4.fill = GridBagConstraints.BOTH;
 		gbc_lblRollouts4.insets = new Insets(0, 0, 5, 5);
@@ -1038,14 +887,16 @@ public class Gui extends CtpAppConstants{
 		gbc_lblRollouts4.gridy = 9;
 		panel_1.add(lblRollouts4, gbc_lblRollouts4);
 		
-		textField_4 = new JTextField();
-		textField_4.setColumns(10);
-		GridBagConstraints gbc_textField_4 = new GridBagConstraints();
-		gbc_textField_4.fill = GridBagConstraints.BOTH;
-		gbc_textField_4.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_4.gridx = 3;
-		gbc_textField_4.gridy = 9;
-		panel_1.add(textField_4, gbc_textField_4);
+		textFieldUCTP = new JTextField();
+		textFieldUCTP.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTP, textFieldUCTP));
+		textFieldUCTP.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTP.name()));
+		textFieldUCTP.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTP = new GridBagConstraints();
+		gbc_textFieldUCTP.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTP.insets = new Insets(0, 0, 5, 5);
+		gbc_textFieldUCTP.gridx = 3;
+		gbc_textFieldUCTP.gridy = 9;
+		panel_1.add(textFieldUCTP, gbc_textFieldUCTP);
 		
 		JLabel label_54 = new JLabel("");
 		GridBagConstraints gbc_label_54 = new GridBagConstraints();
@@ -1055,61 +906,65 @@ public class Gui extends CtpAppConstants{
 		gbc_label_54.gridy = 9;
 		panel_1.add(label_54, gbc_label_54);
 		
-		JLabel lblIterationsri = new JLabel("   Iterations (Ni):");
-		GridBagConstraints gbc_lblIterationsri = new GridBagConstraints();
-		gbc_lblIterationsri.fill = GridBagConstraints.BOTH;
-		gbc_lblIterationsri.insets = new Insets(0, 0, 5, 5);
-		gbc_lblIterationsri.gridx = 5;
-		gbc_lblIterationsri.gridy = 9;
-		panel_1.add(lblIterationsri, gbc_lblIterationsri);
+		JLabel lblIterationsNi = new JLabel("   Iterations (Ni):");
+		GridBagConstraints gbc_lblIterationsNi = new GridBagConstraints();
+		gbc_lblIterationsNi.fill = GridBagConstraints.BOTH;
+		gbc_lblIterationsNi.insets = new Insets(0, 0, 5, 5);
+		gbc_lblIterationsNi.gridx = 5;
+		gbc_lblIterationsNi.gridy = 9;
+		panel_1.add(lblIterationsNi, gbc_lblIterationsNi);
 		
-		textField_6 = new JTextField();
-		textField_6.setColumns(10);
-		GridBagConstraints gbc_textField_6 = new GridBagConstraints();
-		gbc_textField_6.fill = GridBagConstraints.BOTH;
-		gbc_textField_6.insets = new Insets(0, 0, 5, 5);
-		gbc_textField_6.gridx = 6;
-		gbc_textField_6.gridy = 9;
-		panel_1.add(textField_6, gbc_textField_6);
+		textFieldUCTP_Ni = new JTextField();
+		textFieldUCTP_Ni.addActionListener(new TextFieldIntegerListener(PropKeys.ITERATIONS_UCTP, textFieldUCTP_Ni));
+		textFieldUCTP_Ni.setText(prop.getProperty(PropKeys.ITERATIONS_UCTP.name()));
+		textFieldUCTP_Ni.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTP_Ni = new GridBagConstraints();
+		gbc_textFieldUCTP_Ni.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTP_Ni.insets = new Insets(0, 0, 5, 0);
+		gbc_textFieldUCTP_Ni.gridx = 6;
+		gbc_textFieldUCTP_Ni.gridy = 9;
+		panel_1.add(textFieldUCTP_Ni, gbc_textFieldUCTP_Ni);
 		
-		JLabel label_56 = new JLabel("");
-		GridBagConstraints gbc_label_56 = new GridBagConstraints();
-		gbc_label_56.fill = GridBagConstraints.BOTH;
-		gbc_label_56.insets = new Insets(0, 0, 5, 5);
-		gbc_label_56.gridx = 7;
-		gbc_label_56.gridy = 9;
-		panel_1.add(label_56, gbc_label_56);
-		
-		JLabel label_57 = new JLabel("");
-		GridBagConstraints gbc_label_57 = new GridBagConstraints();
-		gbc_label_57.fill = GridBagConstraints.BOTH;
-		gbc_label_57.insets = new Insets(0, 0, 5, 0);
-		gbc_label_57.gridx = 9;
-		gbc_label_57.gridy = 9;
-		panel_1.add(label_57, gbc_label_57);
+		JButton btnSelectAll = new JButton("All");
+		btnSelectAll.addActionListener(new ActionListener(){
+			int counter = 0;
+			public void actionPerformed(ActionEvent e) {
+				boolean b = counter%2==0 ? true:false;
+				selectAllAlgorithms(b);
+				counter++;
+			}
+		});
+		btnSelectAll.setHorizontalAlignment(SwingConstants.LEADING);
+		btnSelectAll.setVerticalAlignment(SwingConstants.BOTTOM);
+		GridBagConstraints gbc_btnSelectAll = new GridBagConstraints();
+		gbc_btnSelectAll.insets = new Insets(0, 0, 5, 5);
+		gbc_btnSelectAll.gridx = 1;
+		gbc_btnSelectAll.gridy = 10;
+		panel_1.add(btnSelectAll, gbc_btnSelectAll);
 		final JLabel lblAgorithmsRun = new JLabel((lblAlgorithmsRunText).replace("x", prop.getProperty(PropKeys.ALGORITHMS_RUN.name())));
 		GridBagConstraints gbc_lblAgorithmsRun = new GridBagConstraints();
 		gbc_lblAgorithmsRun.fill = GridBagConstraints.BOTH;
-		gbc_lblAgorithmsRun.insets = new Insets(0, 0, 0, 5);
+		gbc_lblAgorithmsRun.insets = new Insets(0, 0, 5, 5);
 		gbc_lblAgorithmsRun.gridx = 0;
-		gbc_lblAgorithmsRun.gridy = 10;
+		gbc_lblAgorithmsRun.gridy = 11;
 		panel_1.add(lblAgorithmsRun, gbc_lblAgorithmsRun);
 		
 		JLabel label_58 = new JLabel("");
 		GridBagConstraints gbc_label_58 = new GridBagConstraints();
 		gbc_label_58.fill = GridBagConstraints.BOTH;
-		gbc_label_58.insets = new Insets(0, 0, 0, 5);
+		gbc_label_58.insets = new Insets(0, 0, 5, 5);
 		gbc_label_58.gridx = 1;
-		gbc_label_58.gridy = 10;
+		gbc_label_58.gridy = 11;
 		panel_1.add(label_58, gbc_label_58);
 		
 		algorithmsRun = new JTextField();
+		algorithmsRun.setText(prop.getProperty(PropKeys.ALGORITHMS_RUN.name()));
 		algorithmsRun.setColumns(10);
 		GridBagConstraints gbc_algorithmsRun = new GridBagConstraints();
 		gbc_algorithmsRun.fill = GridBagConstraints.BOTH;
-		gbc_algorithmsRun.insets = new Insets(0, 0, 0, 5);
+		gbc_algorithmsRun.insets = new Insets(0, 0, 5, 5);
 		gbc_algorithmsRun.gridx = 2;
-		gbc_algorithmsRun.gridy = 10;
+		gbc_algorithmsRun.gridy = 11;
 		panel_1.add(algorithmsRun, gbc_algorithmsRun);
 		
 		JButton btnSet = new JButton("Set");
@@ -1121,10 +976,10 @@ public class Gui extends CtpAppConstants{
 					if(value < 1){throw new NumberFormatException("negative values are not allowed");}
 					prop.setProperty(PropKeys.ALGORITHMS_RUN.name(), strValue);
 					if(value != 1){
-						String lblText = "Agorithms are going to be run x times.";
+						String lblText = "   Agorithms are going to be run x times.";
 						lblAgorithmsRun.setText(lblText.replace("x", strValue));
 					}else{
-						lblAgorithmsRun.setText("Agorithms are going to be run 1 time.");
+						lblAgorithmsRun.setText("   Agorithms are going to be run 1 time.");
 					}
 					saveProp();
 				} catch(Exception e1){
@@ -1138,41 +993,66 @@ public class Gui extends CtpAppConstants{
 		});
 		GridBagConstraints gbc_btnSet = new GridBagConstraints();
 		gbc_btnSet.fill = GridBagConstraints.BOTH;
-		gbc_btnSet.insets = new Insets(0, 0, 0, 5);
+		gbc_btnSet.insets = new Insets(0, 0, 5, 5);
 		gbc_btnSet.gridx = 3;
-		gbc_btnSet.gridy = 10;
+		gbc_btnSet.gridy = 11;
 		panel_1.add(btnSet, gbc_btnSet);
 		
 		JLabel label_61 = new JLabel("");
 		GridBagConstraints gbc_label_61 = new GridBagConstraints();
 		gbc_label_61.fill = GridBagConstraints.BOTH;
-		gbc_label_61.insets = new Insets(0, 0, 0, 5);
+		gbc_label_61.insets = new Insets(0, 0, 5, 5);
 		gbc_label_61.gridx = 5;
-		gbc_label_61.gridy = 10;
+		gbc_label_61.gridy = 11;
 		panel_1.add(label_61, gbc_label_61);
 		
 		JLabel label_62 = new JLabel("");
 		GridBagConstraints gbc_label_62 = new GridBagConstraints();
+		gbc_label_62.insets = new Insets(0, 0, 5, 0);
 		gbc_label_62.fill = GridBagConstraints.BOTH;
-		gbc_label_62.insets = new Insets(0, 0, 0, 5);
 		gbc_label_62.gridx = 6;
-		gbc_label_62.gridy = 10;
+		gbc_label_62.gridy = 11;
 		panel_1.add(label_62, gbc_label_62);
-		
-		JLabel label_63 = new JLabel("");
-		GridBagConstraints gbc_label_63 = new GridBagConstraints();
-		gbc_label_63.fill = GridBagConstraints.BOTH;
-		gbc_label_63.insets = new Insets(0, 0, 0, 5);
-		gbc_label_63.gridx = 8;
-		gbc_label_63.gridy = 10;
-		panel_1.add(label_63, gbc_label_63);
-		
-		JLabel label_64 = new JLabel("");
-		GridBagConstraints gbc_label_64 = new GridBagConstraints();
-		gbc_label_64.fill = GridBagConstraints.BOTH;
-		gbc_label_64.gridx = 9;
-		gbc_label_64.gridy = 10;
-		panel_1.add(label_64, gbc_label_64);
 		frmCanadianTravellerProblem.getContentPane().setLayout(groupLayout);
+	}
+	
+	protected static void selectAllAlgorithms(boolean b) {
+		rdbtnSPP.setSelected(b);
+		rdbtnGA.setSelected(b);
+		rdbtnRA.setSelected(b);
+		rdbtnCA.setSelected(b);
+		rdbtnHOP.setSelected(b);
+		rdbtnORO.setSelected(b);
+		rdbtnUCTB.setSelected(b);
+		rdbtnUCTO.setSelected(b);
+		rdbtnUCTP.setSelected(b);
+	}
+	public class TextFieldIntegerListener implements ActionListener{
+		private final PropKeys property;
+		private final JTextField textField;
+		public TextFieldIntegerListener(PropKeys p, JTextField t){
+			property = p;
+			textField= t;
+		}
+		
+		public void actionPerformed(ActionEvent e) {
+			String strValue = textField.getText();
+			int value = Integer.parseInt(strValue);
+			if(value < 1){
+				throw new NumberFormatException();
+			}
+			prop.setProperty(property.name(), textField.getText());
+			textField.setText(strValue); 
+			try {
+				saveProp();
+			} catch (Throwable err) {
+				if(err instanceof NumberFormatException){
+					textField.setText("Pls enter non-negative integer");
+					return;
+				}
+				err.printStackTrace();
+			}
+		}
+		
 	}
 }
