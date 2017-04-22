@@ -57,7 +57,7 @@ public class Uctb2 extends Uctb {
 	}
 	
 	@Override
-	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation) {
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
 		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
 		int currentRollout = 0;
@@ -87,6 +87,8 @@ public class Uctb2 extends Uctb {
 
 			simulator.totalCost += travellingAgent.getTotalCost() + shortestPath.getWeight();
 			simulator.totalIterations ++;
-		}while(currentRollout < numberOfRollouts);
+		}while(currentRollout < additionalSimulation);
+		boolean result = simulator.totalIterations == 0 ? false:true;
+		return result;	
 	}
 }

@@ -37,6 +37,9 @@ public class Uctb extends AbstractUctAlgorithm{
 				maxUctValue = uctValue;
 			}
 		}
+		if(maxValueIndex == -1){
+			maxValueIndex = 0;
+		}
 		return node.getChildren().get(maxValueIndex);
 	}
 	
@@ -53,23 +56,7 @@ public class Uctb extends AbstractUctAlgorithm{
 		return result;
 	}
 	
-	@SuppressWarnings("unused")
-	private void simulateTravelsals(Simulator simulator, int numberOfRollouts) {
-		int currentRollout = 0;
-		do{
-			currentRollout ++;
-			StochasticWeightedGraph rolloutedGraph = this.getGraph().doRollout();
-			// I want my simulate agent to be always in same position and 
-			// I am using him only for creating traveling agent
-			Agent travellingAgent = new Agent(simulator.agent);
-			travellingAgent.senseAction(rolloutedGraph);
-			GreedyAlgorithm.traverseByGa(rolloutedGraph, rolloutedGraph.getTerminalVtx(), travellingAgent, false);
-			simulator.totalCost += travellingAgent.getTotalCost();
-			simulator.totalIterations ++;
-		}while(currentRollout < numberOfRollouts);
-	}
-	
-	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation) {
 		int currentRollout = 0;
 		do{
 			currentRollout ++;
@@ -95,7 +82,9 @@ public class Uctb extends AbstractUctAlgorithm{
 			}
 			simulator.totalCost += travellingAgent.getTotalCost();
 			simulator.totalIterations ++;
-		}while(currentRollout < numberOfRollouts);
+		}while(currentRollout < additionalSimulation);
+		boolean result = simulator.totalIterations == 0 ? false:true;
+		return result;		
 	}
 	
 	public int getNumberOfRollouts() {

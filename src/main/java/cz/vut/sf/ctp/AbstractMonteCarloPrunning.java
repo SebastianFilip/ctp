@@ -67,8 +67,11 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 				}
 				rolloutData = rollout(currentNode, numberOfRollouts);
 			}
-			backPropagation(currentNode, rolloutData);
-			checkExpandedVtx(rolloutData, currentNode, innerCycle);
+			// if rolloutData == null then, rollout was unsuccessful (bad weather)
+			if(rolloutData != null){
+				backPropagation(currentNode, rolloutData);
+				checkExpandedVtx(rolloutData, currentNode, innerCycle);
+			}
 		}
 	}
 	

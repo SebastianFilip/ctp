@@ -8,6 +8,7 @@ import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.gui.LoggerClass;
 
 public class GreedyAlgorithm extends LoggerClass implements DefaultCtpAlgorithm {
 
@@ -15,7 +16,7 @@ public class GreedyAlgorithm extends LoggerClass implements DefaultCtpAlgorithm 
 		LOG.info("Starting Greedy Algorithm");
 		agent.senseAction(ctp.g);
     	traverseByGa(ctp.g, ctp.t, agent, false);
-		return new Result(agent, "greedy");
+		return new Result(agent, "Greedy");
 	}
 	/**
 	 * Traverse path with sensing by GA (if agent's current position was not sensed yet it may cause failures)

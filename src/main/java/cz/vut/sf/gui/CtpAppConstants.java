@@ -1,12 +1,17 @@
-package cz.vut.sf.runner;
+package cz.vut.sf.gui;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Properties;
 
-import cz.vut.sf.algorithms.LoggerClass;
+import javax.swing.JRadioButton;
+
+import cz.vut.sf.algorithms.Result;
 
 public class CtpAppConstants extends LoggerClass {
+	public static boolean stop = false;
+	
     public static enum AlgNames{
     	DIJKSTRA, GA,RA,CA,HOP,ORO,UCTB,UCTO, UCTB2, UCTP;
     }
@@ -38,4 +43,10 @@ public class CtpAppConstants extends LoggerClass {
 		}
 		return true;
 	}
+	
+	// variables for Table
+	public static List<Result> ctpResults;
+	public static int runsMade = 0;
+	public static int columnsToCreate = 0;
+	
 }

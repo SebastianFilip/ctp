@@ -14,6 +14,7 @@ import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.gui.LoggerClass;
 /**
  * 
  * @author Seba
@@ -25,7 +26,7 @@ import cz.vut.sf.graph.Vertex;
  */
 public class Hop extends LoggerClass implements DefaultCtpAlgorithm {
 	
-public int totalRollouts = 1000;
+private int totalRollouts = 100;
 // expandedHistory Set bias HOP to do more exploring by "remembering" previously visited vtxs
 // and setting its estimated cost for all other vertexes but chosen one. This is done till new blockage 
 // is explored, then Set is nulled.
@@ -124,6 +125,11 @@ private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>();
 			}
 		}
 		return null;
+	}
+	
+	
+	public void setTotalRollouts(int r){
+		totalRollouts = r;
 	}
 	
 	private class ExpandedVtx{

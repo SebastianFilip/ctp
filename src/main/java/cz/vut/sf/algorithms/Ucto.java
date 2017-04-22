@@ -64,6 +64,7 @@ public class Ucto extends AbstractUctAlgorithm{
 				maxUctValue = uctValue;
 			}
 		}
+		//TODO find why sometimes maxValueIndex = -1 ArrayOutOfBounds Exception
 		return node.getChildren().get(maxValueIndex);
 	}
 	private double getDijkstraPathWeight(Vertex start){
@@ -116,7 +117,7 @@ public class Ucto extends AbstractUctAlgorithm{
 		return result;
 	}
 
-	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation) {
 		int currentRollout = 0;
 		do{
 			currentRollout ++;
@@ -142,7 +143,9 @@ public class Ucto extends AbstractUctAlgorithm{
 			}
 			simulator.totalCost += travellingAgent.getTotalCost();
 			simulator.totalIterations ++;
-		}while(currentRollout < numberOfRollouts);
+		}while(currentRollout < additionalSimulation);
+		boolean result = simulator.totalIterations == 0 ? false:true;
+		return result;	
 	}
 
 	public int getNumberOfRollouts() {

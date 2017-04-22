@@ -6,7 +6,7 @@ import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
-import cz.vut.sf.algorithms.LoggerClass;
+import cz.vut.sf.gui.LoggerClass;
 import cz.vut.sf.algorithms.RolloutAble;
 import cz.vut.sf.ctp.VtxDTO;
 
@@ -82,7 +82,10 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 				}
 				rolloutData = rollout(currentNode, numberOfRollouts);
 			}
-			backPropagation(currentNode, rolloutData);
+			// if rolloutData == null then, rollout was unsuccessful (bad weather)
+			if(rolloutData != null){
+				backPropagation(currentNode, rolloutData);
+			}
 		}
 	}
 	

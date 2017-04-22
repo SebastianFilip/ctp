@@ -1,6 +1,100 @@
-[04:06:33] INFO  [CtpApp] -------------------------------
-[04:06:33] INFO  [CtpApp] --------Starting run #1--------
-[04:06:33] INFO  [CtpApp] -------------------------------
-[04:06:33] INFO  [CtpApp] -------------------------------
-[04:06:33] INFO  [CtpApp] --------Starting run #2--------
-[04:06:33] INFO  [CtpApp] -------------------------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #1-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=143.0] through: [V1, V2, V12, V25, V35, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #2-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=143.0] through: [V1, V2, V12, V19, V29, V39, V48, V62, V73, V68, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #3-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=143.0] through: [V1, V2, V12, V25, V35, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #4-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=145.0] through: [V1, V11, V20, V33, V46, V60, V66, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #5-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=160.0] through: [V1, V2, V12, V19, V34, V49, V63, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #6-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=153.0] through: [V1, V6, V19, V29, V39, V48, V62, V69, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #7-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=138.0] through: [V1, V2, V12, V19, V29, V41, V51, V65, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #8-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=143.0] through: [V1, V2, V12, V25, V35, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #9-------------
+[03:29:07] INFO  [CtpRunner] -----------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=148.0] through: [V1, V2, V12, V19, V29, V41, V53, V63, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #10-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=142.0] through: [V1, V6, V19, V29, V41, V51, V65, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #11-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=148.0] through: [V1, V2, V12, V19, V29, V41, V53, V63, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #12-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=158.0] through: [V1, V6, V19, V29, V41, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #13-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=142.0] through: [V1, V6, V19, V29, V41, V51, V65, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #14-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=157.0] through: [V1, V11, V20, V33, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #15-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=145.0] through: [V1, V2, V12, V19, V33, V46, V60, V66, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #16-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=158.0] through: [V1, V2, V10, V20, V33, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #17-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=148.0] through: [V1, V2, V12, V19, V29, V41, V53, V63, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #18-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=143.0] through: [V1, V2, V12, V25, V35, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #19-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=162.0] through: [V1, V2, V10, V22, V27, V36, V47, V61, V75]
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] -------------Starting run #20-------------
+[03:29:07] INFO  [CtpRunner] ------------------------------------------
+[03:29:07] INFO  [CtpRunner] starting Dijkstra
+[03:29:07] INFO  [CtpRunner] Dijkstra alg [costPaid=158.0] through: [V1, V6, V19, V29, V41, V47, V61, V75]

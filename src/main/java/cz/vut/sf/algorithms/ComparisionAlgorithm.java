@@ -7,6 +7,7 @@ import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.gui.LoggerClass;
 
 public class ComparisionAlgorithm extends LoggerClass implements DefaultCtpAlgorithm {
 
@@ -37,7 +38,7 @@ public class ComparisionAlgorithm extends LoggerClass implements DefaultCtpAlgor
     			counter = 3;
     		}
     	}while (!(agent.getCurrentVertex().equals(ctp.t)));
-		return new Result(agent, "comparision");
+		return new Result(agent, "Comparision");
 	}
 
 }

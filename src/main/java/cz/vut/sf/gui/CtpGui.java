@@ -24,8 +24,7 @@ import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.parsers.BasicCtpParser;
 import cz.vut.sf.parsers.ParsedDTO;
-import cz.vut.sf.runner.CtpApp;
-import cz.vut.sf.runner.CtpAppConstants;
+import cz.vut.sf.runner.CtpRunner;
 import cz.vut.sf.runner.GraphSwing;
 
 import java.awt.event.ActionListener;
@@ -51,12 +50,19 @@ import org.apache.log4j.LogManager;
 
 import java.awt.Font;
 
+import javax.swing.JTable;
+
+import java.awt.ScrollPane;
+import java.awt.SystemColor;
+import java.awt.Color;
+
 public class CtpGui extends CtpAppConstants{
 	private JFrame frmCanadianTravellerProblem;
 	private JTextField filePath;
 	private JTextField txtVisualiserWidth;
 	private JTextField txtVisualiserHeight;
 	private JTextField algorithmsRun;
+	public static JRadioButton rdbtnInfo;
 	public static JRadioButton rdbtnSPP;
 	public static JRadioButton rdbtnGA;
 	public static JRadioButton rdbtnRA;
@@ -76,6 +82,8 @@ public class CtpGui extends CtpAppConstants{
 	private JTextField textFieldUCTP_Ni;
 	private JTextArea textAreaConsole;
 	private JScrollPane scrollConsole;
+	private JScrollPane scrollTable;
+	private JTable table;
 
 
 	/**
@@ -138,7 +146,7 @@ public class CtpGui extends CtpAppConstants{
         protected Void doInBackground() throws Exception {
         	publish("busy");
 			List<AlgNames> algorithmsToBeMade = getAlgList();
-			CtpApp.run(algorithmsToBeMade, Integer.parseInt((String) prop.get(PropKeys.ALGORITHMS_RUN.name())));
+			CtpRunner.run(algorithmsToBeMade, Integer.parseInt((String) prop.get(PropKeys.ALGORITHMS_RUN.name())));
             return null;
         }
         @Override
@@ -151,6 +159,8 @@ public class CtpGui extends CtpAppConstants{
         public void done(){
         	label.setText("Status: idle");
         	JOptionPane.showMessageDialog(null, "Calculation finished");
+    		ResultsTable.initTable();
+    		table = new JTable(ResultsTable.model);
         }
         
         public LabelSwingWorker(JLabel lbl){
@@ -239,9 +249,12 @@ public class CtpGui extends CtpAppConstants{
 		});
 		lblStatus = new JLabel("Status: idle");
 		JButton btnRun = new JButton("Run");
+		btnRun.setForeground(new Color(0, 128, 0));
 		btnRun.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				stop = false;
 	        	try{
+	        		textAreaConsole.setText(null);
 	        		LabelSwingWorker workerThread = new LabelSwingWorker(lblStatus);
 					workerThread.execute();
 	        	}catch(Exception err){
@@ -260,26 +273,41 @@ public class CtpGui extends CtpAppConstants{
 		JLabel lblNewLabel_1 = new JLabel("Console Output");
 		lblNewLabel_1.setFont(new Font("Tahoma", Font.BOLD, 13));
 		
+		JButton btnStop = new JButton("Stop");
+		btnStop.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+	    		String logMsg = "--- Calculations will be stopped before starting next run---";
+	    		String logMsgSeparator = new String(new char[logMsg.length()]).replace('\0', '-');
+	    		LOG.info(logMsgSeparator);
+				LOG.info(logMsg);
+				LOG.info(logMsgSeparator);
+				stop = true;
+			}
+		});
+		btnStop.setForeground(new Color(255, 0, 0));
+		
 		GroupLayout gl_panel = new GroupLayout(panel);
 		gl_panel.setHorizontalGroup(
 			gl_panel.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_panel.createSequentialGroup()
 					.addContainerGap()
 					.addGroup(gl_panel.createParallelGroup(Alignment.LEADING)
-						.addComponent(scrollConsole, GroupLayout.DEFAULT_SIZE, 740, Short.MAX_VALUE)
+						.addComponent(scrollConsole, GroupLayout.DEFAULT_SIZE, 759, Short.MAX_VALUE)
 						.addComponent(lblStatus, GroupLayout.PREFERRED_SIZE, 92, GroupLayout.PREFERRED_SIZE)
 						.addGroup(gl_panel.createSequentialGroup()
 							.addComponent(lblNewLabel)
 							.addPreferredGap(ComponentPlacement.RELATED)
-							.addComponent(filePath, GroupLayout.DEFAULT_SIZE, 435, Short.MAX_VALUE)
+							.addComponent(filePath, GroupLayout.DEFAULT_SIZE, 454, Short.MAX_VALUE)
 							.addGap(18)
 							.addComponent(openFilePathBtn)
 							.addPreferredGap(ComponentPlacement.RELATED)
 							.addComponent(showGraphBtn)
 							.addGap(16))
 						.addGroup(gl_panel.createSequentialGroup()
-							.addComponent(btnRun)
-							.addGap(241)
+							.addComponent(btnRun, GroupLayout.PREFERRED_SIZE, 63, GroupLayout.PREFERRED_SIZE)
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addComponent(btnStop, GroupLayout.PREFERRED_SIZE, 63, GroupLayout.PREFERRED_SIZE)
+							.addGap(160)
 							.addComponent(lblNewLabel_1, GroupLayout.PREFERRED_SIZE, 111, GroupLayout.PREFERRED_SIZE)))
 					.addContainerGap())
 		);
@@ -295,11 +323,13 @@ public class CtpGui extends CtpAppConstants{
 					.addGap(7)
 					.addComponent(lblStatus)
 					.addPreferredGap(ComponentPlacement.UNRELATED)
-					.addGroup(gl_panel.createParallelGroup(Alignment.BASELINE)
-						.addComponent(btnRun, GroupLayout.PREFERRED_SIZE, 42, GroupLayout.PREFERRED_SIZE)
-						.addComponent(lblNewLabel_1, GroupLayout.PREFERRED_SIZE, 28, GroupLayout.PREFERRED_SIZE))
+					.addGroup(gl_panel.createParallelGroup(Alignment.LEADING)
+						.addGroup(gl_panel.createParallelGroup(Alignment.BASELINE)
+							.addComponent(btnRun, GroupLayout.PREFERRED_SIZE, 42, GroupLayout.PREFERRED_SIZE)
+							.addComponent(lblNewLabel_1, GroupLayout.PREFERRED_SIZE, 28, GroupLayout.PREFERRED_SIZE))
+						.addComponent(btnStop, GroupLayout.PREFERRED_SIZE, 42, GroupLayout.PREFERRED_SIZE))
 					.addPreferredGap(ComponentPlacement.RELATED)
-					.addComponent(scrollConsole, GroupLayout.DEFAULT_SIZE, 301, Short.MAX_VALUE)
+					.addComponent(scrollConsole, GroupLayout.DEFAULT_SIZE, 329, Short.MAX_VALUE)
 					.addGap(28))
 		);
 		panel.setLayout(gl_panel);
@@ -307,76 +337,6 @@ public class CtpGui extends CtpAppConstants{
 		ButtonGroup bgLogLevel = new ButtonGroup(); 
 		
 		final String lblAlgorithmsRunText = "   Agorithms are going to be run x time(s).";
-		
-		JPanel panel_2 = new JPanel();
-		tabbedPane.addTab("App Settings", null, panel_2, null);
-		
-		JLabel lblLogLevel = new JLabel("Log level");
-		
-		JLabel lblVisualiserWidth = new JLabel("Visualiser width:");
-		
-		txtVisualiserWidth = new JTextField();
-		txtVisualiserWidth.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_WIDTH, txtVisualiserWidth));
-		txtVisualiserWidth.setText(prop.getProperty(PropKeys.VISUALISER_WIDTH.name()));
-		txtVisualiserWidth.setColumns(10);
-		
-		JLabel lblVisualiserHeight = new JLabel("Visualiser height:");
-		
-		txtVisualiserHeight = new JTextField();
-		txtVisualiserHeight.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_HEIGHT, txtVisualiserHeight));
-		txtVisualiserHeight.setText(prop.getProperty(PropKeys.VISUALISER_HEIGHT.name()));
-		txtVisualiserHeight.setColumns(10);
-		
-		JRadioButton rdbtnInfo = new JRadioButton("INFO",true);
-		JRadioButton rdbtnDebug = new JRadioButton("DEBUG", false);
-		bgLogLevel.add(rdbtnDebug);
-		bgLogLevel.add(rdbtnInfo);
-		
-		
-		GroupLayout gl_panel_2 = new GroupLayout(panel_2);
-		gl_panel_2.setHorizontalGroup(
-			gl_panel_2.createParallelGroup(Alignment.LEADING)
-				.addGroup(gl_panel_2.createSequentialGroup()
-					.addGap(21)
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING)
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addComponent(lblLogLevel)
-							.addPreferredGap(ComponentPlacement.UNRELATED)
-							.addComponent(rdbtnInfo)
-							.addPreferredGap(ComponentPlacement.RELATED)
-							.addComponent(rdbtnDebug))
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING, false)
-								.addComponent(lblVisualiserWidth, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-								.addComponent(lblVisualiserHeight, GroupLayout.DEFAULT_SIZE, 113, Short.MAX_VALUE))
-							.addPreferredGap(ComponentPlacement.UNRELATED)
-							.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING, false)
-								.addComponent(txtVisualiserWidth)
-								.addComponent(txtVisualiserHeight))))
-					.addContainerGap(533, Short.MAX_VALUE))
-		);
-		gl_panel_2.setVerticalGroup(
-			gl_panel_2.createParallelGroup(Alignment.LEADING)
-				.addGroup(gl_panel_2.createSequentialGroup()
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING)
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addGap(27)
-							.addComponent(lblVisualiserWidth))
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addGap(24)
-							.addComponent(txtVisualiserWidth, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
-					.addPreferredGap(ComponentPlacement.RELATED)
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.BASELINE)
-						.addComponent(lblVisualiserHeight)
-						.addComponent(txtVisualiserHeight, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-					.addGap(11)
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.BASELINE)
-						.addComponent(lblLogLevel)
-						.addComponent(rdbtnInfo)
-						.addComponent(rdbtnDebug))
-					.addContainerGap(283, Short.MAX_VALUE))
-		);
-		panel_2.setLayout(gl_panel_2);
 		
 		JPanel panel_1 = new JPanel();
 		tabbedPane.addTab("Algorithms", null, panel_1, null);
@@ -1013,6 +973,142 @@ public class CtpGui extends CtpAppConstants{
 		gbc_label_62.gridx = 6;
 		gbc_label_62.gridy = 11;
 		panel_1.add(label_62, gbc_label_62);
+		
+		JPanel panel_3 = new JPanel();
+		tabbedPane.addTab("Results", null, panel_3, null);
+		
+		table = new JTable(ResultsTable.model);
+		scrollTable = new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+		
+		JLabel lblTable = new JLabel("  Results");
+		lblTable.setVerticalAlignment(SwingConstants.BOTTOM);
+		lblTable.setFont(new Font("Tahoma", Font.BOLD, 13));
+		lblTable.setBackground(SystemColor.controlShadow);
+		
+		JButton btnNewButton = new JButton("Export to xls");
+		btnNewButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				JButton save = new JButton();
+				JFileChooser fc = new JFileChooser();
+				fc.setDialogTitle("Save File");
+				fc.setCurrentDirectory(new File(System.getProperty("user.dir") + SEPARATOR + "results" ));
+				fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+				if(fc.showSaveDialog(save) == JFileChooser.APPROVE_OPTION){
+					String fileName = fc.getSelectedFile().getName();
+					String path = fc.getSelectedFile().getParentFile().getPath();
+
+					String ext = "";
+					String file = "";
+
+					if(fileName.length() > 4){
+						ext = fileName.substring(fileName.length()-4, fileName.length());
+					}
+
+					if(ext.equals(".xls")){
+						file = path + "\\" + fileName; 
+					}else{
+						file = path + "\\" + fileName + ".xls"; 
+					}
+					ResultsTable.exportToXls(new File(file));
+				}
+			}
+		});
+		
+		GroupLayout gl_panel_3 = new GroupLayout(panel_3);
+		gl_panel_3.setHorizontalGroup(
+			gl_panel_3.createParallelGroup(Alignment.LEADING)
+				.addGroup(gl_panel_3.createSequentialGroup()
+					.addContainerGap()
+					.addGroup(gl_panel_3.createParallelGroup(Alignment.LEADING)
+						.addComponent(scrollTable, GroupLayout.DEFAULT_SIZE, 759, Short.MAX_VALUE)
+						.addGroup(gl_panel_3.createSequentialGroup()
+							.addComponent(lblTable, GroupLayout.PREFERRED_SIZE, 70, GroupLayout.PREFERRED_SIZE)
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addComponent(btnNewButton)))
+					.addContainerGap())
+		);
+		gl_panel_3.setVerticalGroup(
+			gl_panel_3.createParallelGroup(Alignment.TRAILING)
+				.addGroup(Alignment.LEADING, gl_panel_3.createSequentialGroup()
+					.addContainerGap()
+					.addGroup(gl_panel_3.createParallelGroup(Alignment.BASELINE)
+						.addComponent(lblTable, GroupLayout.PREFERRED_SIZE, 28, GroupLayout.PREFERRED_SIZE)
+						.addComponent(btnNewButton, GroupLayout.PREFERRED_SIZE, 36, GroupLayout.PREFERRED_SIZE))
+					.addGap(18)
+					.addComponent(scrollTable, GroupLayout.DEFAULT_SIZE, 372, Short.MAX_VALUE)
+					.addGap(28))
+		);
+		panel_3.setLayout(gl_panel_3);
+		
+		JPanel panel_2 = new JPanel();
+		tabbedPane.addTab("App Settings", null, panel_2, null);
+		
+		JLabel lblLogLevel = new JLabel("Log level");
+		
+		JLabel lblVisualiserWidth = new JLabel("Visualiser width:");
+		
+		txtVisualiserWidth = new JTextField();
+		txtVisualiserWidth.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_WIDTH, txtVisualiserWidth));
+		txtVisualiserWidth.setText(prop.getProperty(PropKeys.VISUALISER_WIDTH.name()));
+		txtVisualiserWidth.setColumns(10);
+		
+		JLabel lblVisualiserHeight = new JLabel("Visualiser height:");
+		
+		txtVisualiserHeight = new JTextField();
+		txtVisualiserHeight.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_HEIGHT, txtVisualiserHeight));
+		txtVisualiserHeight.setText(prop.getProperty(PropKeys.VISUALISER_HEIGHT.name()));
+		txtVisualiserHeight.setColumns(10);
+		
+		rdbtnInfo = new JRadioButton("INFO",true);
+		JRadioButton rdbtnDebug = new JRadioButton("DEBUG", false);
+		bgLogLevel.add(rdbtnDebug);
+		bgLogLevel.add(rdbtnInfo);
+		
+		
+		GroupLayout gl_panel_2 = new GroupLayout(panel_2);
+		gl_panel_2.setHorizontalGroup(
+			gl_panel_2.createParallelGroup(Alignment.LEADING)
+				.addGroup(gl_panel_2.createSequentialGroup()
+					.addGap(21)
+					.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING)
+						.addGroup(gl_panel_2.createSequentialGroup()
+							.addComponent(lblLogLevel)
+							.addPreferredGap(ComponentPlacement.UNRELATED)
+							.addComponent(rdbtnInfo)
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addComponent(rdbtnDebug))
+						.addGroup(gl_panel_2.createSequentialGroup()
+							.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING, false)
+								.addComponent(lblVisualiserWidth, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+								.addComponent(lblVisualiserHeight, GroupLayout.DEFAULT_SIZE, 113, Short.MAX_VALUE))
+							.addPreferredGap(ComponentPlacement.UNRELATED)
+							.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING, false)
+								.addComponent(txtVisualiserWidth)
+								.addComponent(txtVisualiserHeight))))
+					.addContainerGap(533, Short.MAX_VALUE))
+		);
+		gl_panel_2.setVerticalGroup(
+			gl_panel_2.createParallelGroup(Alignment.LEADING)
+				.addGroup(gl_panel_2.createSequentialGroup()
+					.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING)
+						.addGroup(gl_panel_2.createSequentialGroup()
+							.addGap(27)
+							.addComponent(lblVisualiserWidth))
+						.addGroup(gl_panel_2.createSequentialGroup()
+							.addGap(24)
+							.addComponent(txtVisualiserWidth, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
+					.addPreferredGap(ComponentPlacement.RELATED)
+					.addGroup(gl_panel_2.createParallelGroup(Alignment.BASELINE)
+						.addComponent(lblVisualiserHeight)
+						.addComponent(txtVisualiserHeight, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
+					.addGap(11)
+					.addGroup(gl_panel_2.createParallelGroup(Alignment.BASELINE)
+						.addComponent(lblLogLevel)
+						.addComponent(rdbtnInfo)
+						.addComponent(rdbtnDebug))
+					.addContainerGap(283, Short.MAX_VALUE))
+		);
+		panel_2.setLayout(gl_panel_2);
 		frmCanadianTravellerProblem.getContentPane().setLayout(groupLayout);
 	}
 	
@@ -1036,18 +1132,19 @@ public class CtpGui extends CtpAppConstants{
 		}
 		
 		public void actionPerformed(ActionEvent e) {
-			String strValue = textField.getText();
-			int value = Integer.parseInt(strValue);
-			if(value < 1){
-				throw new NumberFormatException();
-			}
-			prop.setProperty(property.name(), textField.getText());
-			textField.setText(strValue); 
 			try {
+				String strValue = textField.getText();
+				int value = Integer.parseInt(strValue);
+				if(value < 1){
+					throw new NumberFormatException();
+				}
+				prop.setProperty(property.name(), textField.getText());
+				textField.setText(strValue); 
+				
 				saveProp();
 			} catch (Throwable err) {
 				if(err instanceof NumberFormatException){
-					textField.setText("Pls enter non-negative integer");
+					textField.setText("Enter positive int");
 					return;
 				}
 				err.printStackTrace();

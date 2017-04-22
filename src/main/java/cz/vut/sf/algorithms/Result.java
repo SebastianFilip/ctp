@@ -6,6 +6,7 @@ public class Result {
 	public double costPaid;
 	public String msg;
 	public String pathTraversed;
+	public long timeElapsed = 0;
 	
 	public Result(Agent a){
 		costPaid = a.getTotalCost();

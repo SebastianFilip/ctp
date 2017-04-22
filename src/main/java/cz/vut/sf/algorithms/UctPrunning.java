@@ -17,8 +17,8 @@ import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
 public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgorithm{
-	protected int numberOfRollouts = 10;
-	protected int numberOfIteration = 100000;
+	protected int numberOfRollouts = 100;
+	protected int numberOfIteration = 100;
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		LOG.info("Starting UCTP, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
 		int blockedEdgesRevealed = 0;
@@ -60,15 +60,17 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 		}
 		return new Result(agent, "UCTP");
 	}
-
+	
 	@Override
 	public Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts) {		
 		Simulator simulator = new Simulator(node.getParent().getData().vtx);
-		doSimulation(simulator,node.getData().vtx ,numberOfRollouts);
-		return simulator;
+		if(doSimulation(simulator,node.getData().vtx ,numberOfRollouts)){
+			return simulator;
+		}
+		return null;
 	}
 	
-	public void doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int numberOfRollouts) {
+	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation) {
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
 		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
 		int currentRollout = 0;
@@ -101,7 +103,9 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 			}
 			simulator.totalCost += travellingAgent.getTotalCost() + shortestPath.getWeight();
 			simulator.totalIterations ++;
-		}while(currentRollout < numberOfRollouts);
+		}while(currentRollout < additionalSimulation);
+		boolean result = simulator.totalIterations == 0 ? false:true;
+		return result;	
 	}
 	
 	protected Vertex getBestAction(){

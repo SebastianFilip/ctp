@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.lf5.viewer.configure.ConfigurationManager;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
@@ -27,10 +25,12 @@ import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.gui.CtpAppConstants;
+import cz.vut.sf.gui.CtpGui;
 import cz.vut.sf.parsers.BasicCtpParser;
 import cz.vut.sf.parsers.ParsedDTO;
 
-public class CtpApp extends CtpAppConstants {
+public class CtpRunner extends CtpAppConstants {
     static Graph<String, DefaultEdge> completeGraph;
     
     public static void run(List<AlgNames> algorithmsToBeMade, int numberOfRuns){
@@ -43,41 +43,36 @@ public class CtpApp extends CtpAppConstants {
     	Vertex t = g.getTerminalVtx();
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
     	if(!new GraphChecker().isGraphConnected(g)){
-    		System.out.println("is connected: false");
-    		g.removeAllBlockedEdges();
-    		System.out.println(g.toString());
+    		LOG.info("Generated graph was not connected, pls try again.");
+    		LOG.info(g.toString());
     		return;
     	}
-    	List<Result> results = algorithmRunner(ctp, algorithmsToBeMade, numberOfRuns);
-    	
-    	//Print results
-    	//printResult(results);
-    }
-    
-    private static void printResult(List<Result> results){
-    	if(results==null)return;
-    	for(Result result : results){
-    		if(result!=null){
-    		System.out.println(result.toString());
-    		}
-    	}
+    	algorithmRunner(ctp, algorithmsToBeMade, numberOfRuns);
     }
     
     private static List<Result> algorithmRunner(DefaultCtp ctp, List<AlgNames> algorithms, final int numberOfRuns){
     	List<Result> results = new ArrayList<Result>();
-    	Level lvl = prop.getProperty(PropKeys.LOG_LEVEL.name()).contains("INFO") ? Level.INFO : Level.DEBUG;
+    	Level lvl = isLogInfo() ? Level.INFO : Level.DEBUG;
     	LOG.setLevel(lvl);
+    	runsMade = 0;
+    	columnsToCreate = algorithms.size();
     	int repeater = numberOfRuns;
     	while(repeater>0){
-    		String logMsg = "--------Starting run #" + (numberOfRuns - repeater + 1) + "--------";
+    		String logMsg = "-------------Starting run #" + (numberOfRuns - repeater + 1) + "-------------";
     		String logMsgSeparator = new String(new char[logMsg.length()]).replace('\0', '-');
     		LOG.info(logMsgSeparator);
     		LOG.info(logMsg);
     		LOG.info(logMsgSeparator);
-    		results.addAll(runAlgorithms(ctp, algorithms));
+    		List<Result> runResult = runAlgorithms(ctp, algorithms);
+    		if(stop){
+    			return results;
+    		}
+    		ctpResults = results;
     		repeater--;
+    		runsMade++;
     		// for each repetition new instance of graph
     		ctp.g = ctp.g.doRollout();
+    		results.addAll(runResult);
     	}
     	return results;
     }
@@ -86,18 +81,19 @@ public class CtpApp extends CtpAppConstants {
 		List<Result> result = new ArrayList<Result>();
 		try {
 			for(AlgNames algorithm : algorithms){
+				long startTime = System.nanoTime();
 				StochasticWeightedGraph graphClone = (StochasticWeightedGraph) ctp.g.clone();
 				Result r = null;
 				switch (algorithm){
 					case DIJKSTRA:
-						LOG.info("starting DIJKSTRA");
+						LOG.info("starting Dijkstra");
 				    	ctp.g.removeAllBlockedEdges();
 				    	DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(ctp.g);
 				    	GraphPath<Vertex, StochasticWeightedEdge> shortestPath = dsp.getPath(ctp.s, ctp.t);
 				    	Agent a = new Agent(ctp.s);
 				    	a.senseAction(ctp.g);
 				    	a.traversePath(shortestPath);
-				    	r = new Result(a, "DIJKSTRA");
+				    	r = new Result(a, "Dijkstra");
 						break;
 					case GA:
 						GreedyAlgorithm ga = new GreedyAlgorithm();
@@ -113,10 +109,14 @@ public class CtpApp extends CtpAppConstants {
 						break;
 					case HOP:
 						Hop hop = new Hop();
+						int nHop = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_HOP.name()));
+						hop.setTotalRollouts(nHop);
 						r = hop.solve(ctp, new Agent(ctp.s));
 						break;
 					case ORO:
 						Oro oro = new Oro();
+						int nOro = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_ORO.name()));
+						oro.setTotalRollouts(nOro);
 						r = oro.solve(ctp, new Agent(ctp.s));
 						break;
 					case UCTB:
@@ -148,14 +148,23 @@ public class CtpApp extends CtpAppConstants {
 						r = uctp.solve(ctp, new Agent(ctp.s));
 						break;
 					}
-				//set graphClone to ctp
-				ctp.g = graphClone;
+				r.timeElapsed = (long) ((System.nanoTime() - startTime)/1E6);
 				result.add(r);
 				LOG.info(r.toString());
+				if(stop){
+					return result;
+				}
+				//set graphClone to ctp
+				ctp.g = graphClone;
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return result;
+	}
+	
+	
+	public static boolean isLogInfo(){
+		return CtpGui.rdbtnInfo.isSelected();
 	}
 }

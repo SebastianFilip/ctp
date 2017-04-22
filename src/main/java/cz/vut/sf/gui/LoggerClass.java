@@ -1,4 +1,7 @@
-package cz.vut.sf.algorithms;
+package cz.vut.sf.gui;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.swing.JTextArea;
 
@@ -26,7 +29,13 @@ public abstract class LoggerClass {
 
 		@Override
 		protected void append(LoggingEvent event) {
-			jTextArea.append("   " + event.getMessage().toString());
+			Date time = new Date(event.getTimeStamp());
+			String timeStr = (new SimpleDateFormat("HH:mm:ss")).format(time);
+			if(event.getLevel() == Level.INFO){
+				jTextArea.append(" ["  + timeStr + "] INFO  " + event.getMessage().toString());
+			}else{
+				jTextArea.append(" ["  + timeStr + "] DEBUG " + event.getMessage().toString());
+			}
 			jTextArea.append("\n");
 		}
 

@@ -9,6 +9,7 @@ import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.gui.LoggerClass;
 /**
  * 
  * @author Seba
@@ -19,7 +20,7 @@ import cz.vut.sf.graph.Vertex;
  * action with the lowest expected mean value will be chosen.
  */
 public class Oro extends LoggerClass implements DefaultCtpAlgorithm {
-	public int totalRollouts = 500;
+	private int totalRollouts = 100;
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		LOG.info("Starting ORO, total rollouts = " + totalRollouts);
 		Vertex chosenVtx = null;
@@ -66,5 +67,9 @@ public class Oro extends LoggerClass implements DefaultCtpAlgorithm {
 				simulators.get(i).totalIterations ++;
 			}
 		}while(currentRollout < totalRollouts);
+	}
+	
+	public void setTotalRollouts(int r){
+		totalRollouts = r;
 	}
 }

@@ -2,9 +2,9 @@ package cz.vut.sf.ctp;
 
 import java.util.List;
 
-import cz.vut.sf.algorithms.LoggerClass;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.gui.LoggerClass;
 
 //holds copies of agent and moves them towards to specified vtx
 public class Simulator extends LoggerClass{
