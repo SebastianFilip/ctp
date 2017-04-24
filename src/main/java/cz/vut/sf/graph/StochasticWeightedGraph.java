@@ -136,7 +136,8 @@ public class StochasticWeightedGraph extends
 	
 	/**
 	 * Method for simulation purpose, return one possible outcome of stochastic graph
-	 * according to its probabilities. The check that source and target vtx is
+	 * according to its probabilities. The check that connection exists between 
+	 * source and target vtx is made. Re-evaluated are only edges with belief state unknown.
 	 * 
 	 * @ new connected Instance of graph that calls it
 	 */

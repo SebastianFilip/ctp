@@ -2,7 +2,6 @@ package cz.vut.sf.gui;
 
 import java.awt.EventQueue;
 
-import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
@@ -35,16 +34,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
 
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
-import javax.swing.border.Border;
 
 import org.apache.log4j.LogManager;
 
@@ -52,9 +48,9 @@ import java.awt.Font;
 
 import javax.swing.JTable;
 
-import java.awt.ScrollPane;
 import java.awt.SystemColor;
 import java.awt.Color;
+import java.awt.Toolkit;
 
 public class CtpGui extends CtpAppConstants{
 	private JFrame frmCanadianTravellerProblem;
@@ -62,6 +58,7 @@ public class CtpGui extends CtpAppConstants{
 	private JTextField txtVisualiserWidth;
 	private JTextField txtVisualiserHeight;
 	private JTextField algorithmsRun;
+	private static JRadioButton rdbtnYes;
 	public static JRadioButton rdbtnInfo;
 	public static JRadioButton rdbtnSPP;
 	public static JRadioButton rdbtnGA;
@@ -79,38 +76,33 @@ public class CtpGui extends CtpAppConstants{
 	private JTextField textFieldUCTO;
 	private JTextField textFieldUCTP;
 	private JTextField textFieldUCTO_M;
-	private JTextField textFieldUCTP_Ni;
+	private JTextField textFieldUCTP_M;
 	private JTextArea textAreaConsole;
 	private JScrollPane scrollConsole;
 	private JScrollPane scrollTable;
 	private JTable table;
+	private JTextField txtDefaultExportFolder;
+	private JTextField txtDefaultSourceFolder;
 
 
 	/**
 	 * Launch the application.
 	 */
-	public static void main(String[] args) {
+	public static void startGui() {
+		LOG.info("starting gui");
 		FileOutputStream fos = null;
 		try{
 			loadProperties();
 			if(!checkProperties()){
 				fos = new FileOutputStream(configFile);
-				prop.setProperty(PropKeys.VISUALISER_WIDTH.name(), "1366");
-				prop.setProperty(PropKeys.VISUALISER_HEIGHT.name(), "768");
-				prop.setProperty(PropKeys.LOG_LEVEL.name(), "INFO");
-				prop.setProperty(PropKeys.ALGORITHMS_RUN.name(), "1");
-				prop.setProperty(PropKeys.SOURCE_FILE.name(), resourcePath + SEPARATOR + "eyerich.ctp");
-				prop.setProperty(PropKeys.ROLLOUTS_HOP.name(), "100");
-				prop.setProperty(PropKeys.ROLLOUTS_ORO.name(), "100");
-				prop.setProperty(PropKeys.ROLLOUTS_UCTB.name(), "100");
-				prop.setProperty(PropKeys.ROLLOUTS_UCTO.name(), "100");
-				prop.setProperty(PropKeys.ROLLOUTS_UCTP.name(), "100");
-				prop.setProperty(PropKeys.ITERATIONS_UCTP.name(), "100");
-				prop.setProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name(), "20");
+				fillDefaultProperties();
 				prop.store(fos, "Application Settings");
 				fos.close();
+				LOG.info("created new config.properties file.");
 			}
 		}catch(Exception e){
+			LOG.error(e);
+			e.printStackTrace();
 			
 		}
 		
@@ -121,6 +113,7 @@ public class CtpGui extends CtpAppConstants{
 					window.frmCanadianTravellerProblem.setVisible(true);
 					window.frmCanadianTravellerProblem.pack();
 				} catch (Exception e) {
+					LOG.error(e);
 					e.printStackTrace();
 				}finally{
 				}
@@ -135,10 +128,23 @@ public class CtpGui extends CtpAppConstants{
 		fos.close();
 	}
 	
-	public static void loadProperties() throws IOException{
-		FileInputStream fin = new FileInputStream(configFile);
-		prop.load(fin);
-		fin.close();
+	public static boolean loadProperties() throws IOException{
+		//have to escape \ on windows not sure how it would be on other systems
+		String[] parts = resourcePath.split("SEPARATOR+SEPARATOR");
+		String root = "";
+		for (int i = 0; i < parts.length - 1; i++){
+			root += parts[i] + SEPARATOR;
+		}
+		configFile  = new File(root + "config.properties");
+		LOG.info("reading .properties file from path:" + root + "config.properties");
+		try{
+			FileInputStream fin = new FileInputStream(configFile);
+			prop.load(fin);
+		}catch (Exception e){
+			LOG.info("Error reading .properties file", e);
+			return false;
+		}
+		return true;
 	}
 	private class LabelSwingWorker extends SwingWorker<Void, String>{
 		private final JLabel label;
@@ -193,6 +199,7 @@ public class CtpGui extends CtpAppConstants{
 	 */
 	private void initialize() {
 		frmCanadianTravellerProblem = new JFrame();
+		trySetIcon();
 		frmCanadianTravellerProblem.setTitle("Canadian Traveller Problem Application");
 		frmCanadianTravellerProblem.setBounds(100, 100, 800, 522);
 		frmCanadianTravellerProblem.setMinimumSize(new Dimension(800,522));
@@ -217,8 +224,8 @@ public class CtpGui extends CtpAppConstants{
 			public void actionPerformed(ActionEvent e) {
 				JButton open = new JButton();
 				JFileChooser fc = new JFileChooser();
-				fc.setDialogTitle("OpenFile");
-				fc.setCurrentDirectory(new File(System.getProperty("user.dir") + SEPARATOR + "src" + SEPARATOR + "main" + SEPARATOR + "resources" ));
+				fc.setDialogTitle("Open File");
+				fc.setCurrentDirectory(new File(prop.getProperty(PropKeys.DEFAULT_SOURCE_FOLDER.name())));
 				fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 				if(fc.showOpenDialog(open) == JFileChooser.APPROVE_OPTION){
 					filePath.setText(fc.getSelectedFile().toString());
@@ -235,20 +242,42 @@ public class CtpGui extends CtpAppConstants{
 		JLabel lblNewLabel = new JLabel("Graph source path:");
 		
 		filePath = new JTextField();
+		filePath.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				prop.setProperty(PropKeys.SOURCE_FILE.name(), filePath.getText());
+				try {
+					saveProp();
+				} catch (Throwable err) {
+					err.printStackTrace();
+				}
+			}
+			
+		});
 		filePath.setText(prop.getProperty(PropKeys.SOURCE_FILE.name()));
 		filePath.setColumns(10);
 		
 		JButton showGraphBtn = new JButton("Show Graph");
+		showGraphBtn.setToolTipText("Show image of graph, if it do not show anything, file is invalid.\r\nVertexes are randomly placed if NODE_COORD_SECTION is missing\r\nin source file.");
 		showGraphBtn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-		    	ParsedDTO graphData = new BasicCtpParser().parseFile(prop.getProperty(PropKeys.SOURCE_FILE.name()));
-		    	StochasticWeightedGraph g;
-		    	g = new StochasticWeightedGraph(StochasticWeightedEdge.class, graphData);
-		    	GraphSwing.displayGraph(g, graphData.pointList);
+		    	try{
+			    	ParsedDTO graphData = new BasicCtpParser().parseFile(prop.getProperty(PropKeys.SOURCE_FILE.name()));
+			    	StochasticWeightedGraph g;
+			    	g = new StochasticWeightedGraph(StochasticWeightedEdge.class, graphData);
+			    	int xFrameSize = Integer.parseInt(prop.getProperty(PropKeys.VISUALISER_WIDTH.name()));
+			    	int yFrameSize = Integer.parseInt(prop.getProperty(PropKeys.VISUALISER_HEIGHT.name()));
+		    		GraphSwing.displayGraph(g, graphData.pointList, xFrameSize, yFrameSize);
+		    		graphData.validateSize();
+		    	}catch (Throwable e1){
+		    		LOG.info("Loaded graph data are invalid");
+		    		LOG.info(e1);
+		    	}
+		    	
 			}
 		});
 		lblStatus = new JLabel("Status: idle");
 		JButton btnRun = new JButton("Run");
+		btnRun.setToolTipText("Starts calculation specified in Algorithms tab.\r\nMake sure valid graph data are available.");
 		btnRun.setForeground(new Color(0, 128, 0));
 		btnRun.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -274,6 +303,7 @@ public class CtpGui extends CtpAppConstants{
 		lblNewLabel_1.setFont(new Font("Tahoma", Font.BOLD, 13));
 		
 		JButton btnStop = new JButton("Stop");
+		btnStop.setToolTipText("Stops calculation, if at least one run was finished \r\nthen results will be available in Results tab.");
 		btnStop.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 	    		String logMsg = "--- Calculations will be stopped before starting next run---";
@@ -335,6 +365,7 @@ public class CtpGui extends CtpAppConstants{
 		panel.setLayout(gl_panel);
 		
 		ButtonGroup bgLogLevel = new ButtonGroup(); 
+		ButtonGroup bgDefaultXlsName = new ButtonGroup(); 
 		
 		final String lblAlgorithmsRunText = "   Agorithms are going to be run x time(s).";
 		
@@ -608,6 +639,7 @@ public class CtpGui extends CtpAppConstants{
 		panel_1.add(lblRollouts, gbc_lblRollouts);
 		
 		textFieldHOP = new JTextField();
+		textFieldHOP.setToolTipText("Pls enter positive integer value.");
 		textFieldHOP.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_HOP, textFieldHOP));
 		
 		textFieldHOP.setText(prop.getProperty(PropKeys.ROLLOUTS_HOP.name()));
@@ -668,6 +700,7 @@ public class CtpGui extends CtpAppConstants{
 		panel_1.add(lblRollouts1, gbc_lblRollouts1);
 		
 		textFieldORO = new JTextField();
+		textFieldORO.setToolTipText("Pls enter positive integer value.");
 		textFieldORO.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_ORO, textFieldORO));
 		textFieldORO.setText(prop.getProperty(PropKeys.ROLLOUTS_ORO.name()));
 		textFieldORO.setColumns(10);
@@ -727,6 +760,7 @@ public class CtpGui extends CtpAppConstants{
 		panel_1.add(lblRollouts2, gbc_lblRollouts2);
 		
 		textFieldUCTB = new JTextField();
+		textFieldUCTB.setToolTipText("Pls enter positive integer value.");
 		textFieldUCTB.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTB, textFieldUCTB));
 		textFieldUCTB.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
 		textFieldUCTB.setColumns(10);
@@ -786,6 +820,7 @@ public class CtpGui extends CtpAppConstants{
 		panel_1.add(lblRollouts3, gbc_lblRollouts3);
 		
 		textFieldUCTO = new JTextField();
+		textFieldUCTO.setToolTipText("Pls enter positive integer value.");
 		textFieldUCTO.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTO, textFieldUCTO));
 		textFieldUCTO.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTO.name()));;
 		textFieldUCTO.setColumns(10);
@@ -813,6 +848,7 @@ public class CtpGui extends CtpAppConstants{
 		panel_1.add(lblAdditionalRolloutsm, gbc_lblAdditionalRolloutsm);
 		
 		textFieldUCTO_M = new JTextField();
+		textFieldUCTO_M.setToolTipText("Pls enter positive integer value.");
 		textFieldUCTO_M.addActionListener(new TextFieldIntegerListener(PropKeys.ADDITIONAL_ROLLOUTS_UCTO, textFieldUCTO_M));
 		textFieldUCTO_M.setText(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name()));
 		textFieldUCTO_M.setColumns(10);
@@ -848,6 +884,7 @@ public class CtpGui extends CtpAppConstants{
 		panel_1.add(lblRollouts4, gbc_lblRollouts4);
 		
 		textFieldUCTP = new JTextField();
+		textFieldUCTP.setToolTipText("Pls enter positive integer value.");
 		textFieldUCTP.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTP, textFieldUCTP));
 		textFieldUCTP.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTP.name()));
 		textFieldUCTP.setColumns(10);
@@ -866,24 +903,25 @@ public class CtpGui extends CtpAppConstants{
 		gbc_label_54.gridy = 9;
 		panel_1.add(label_54, gbc_label_54);
 		
-		JLabel lblIterationsNi = new JLabel("   Iterations (Ni):");
-		GridBagConstraints gbc_lblIterationsNi = new GridBagConstraints();
-		gbc_lblIterationsNi.fill = GridBagConstraints.BOTH;
-		gbc_lblIterationsNi.insets = new Insets(0, 0, 5, 5);
-		gbc_lblIterationsNi.gridx = 5;
-		gbc_lblIterationsNi.gridy = 9;
-		panel_1.add(lblIterationsNi, gbc_lblIterationsNi);
+		JLabel lbAdditionalRolloutsUCTP = new JLabel("   Additional Rollouts(M):");
+		GridBagConstraints gbc_lbAdditionalRolloutsUCTP = new GridBagConstraints();
+		gbc_lbAdditionalRolloutsUCTP.fill = GridBagConstraints.BOTH;
+		gbc_lbAdditionalRolloutsUCTP.insets = new Insets(0, 0, 5, 5);
+		gbc_lbAdditionalRolloutsUCTP.gridx = 5;
+		gbc_lbAdditionalRolloutsUCTP.gridy = 9;
+		panel_1.add(lbAdditionalRolloutsUCTP, gbc_lbAdditionalRolloutsUCTP);
 		
-		textFieldUCTP_Ni = new JTextField();
-		textFieldUCTP_Ni.addActionListener(new TextFieldIntegerListener(PropKeys.ITERATIONS_UCTP, textFieldUCTP_Ni));
-		textFieldUCTP_Ni.setText(prop.getProperty(PropKeys.ITERATIONS_UCTP.name()));
-		textFieldUCTP_Ni.setColumns(10);
-		GridBagConstraints gbc_textFieldUCTP_Ni = new GridBagConstraints();
-		gbc_textFieldUCTP_Ni.fill = GridBagConstraints.BOTH;
-		gbc_textFieldUCTP_Ni.insets = new Insets(0, 0, 5, 0);
-		gbc_textFieldUCTP_Ni.gridx = 6;
-		gbc_textFieldUCTP_Ni.gridy = 9;
-		panel_1.add(textFieldUCTP_Ni, gbc_textFieldUCTP_Ni);
+		textFieldUCTP_M = new JTextField();
+		textFieldUCTP_M.setToolTipText("Pls enter positive integer value.");
+		textFieldUCTP_M.addActionListener(new TextFieldIntegerListener(PropKeys.ADDITIONAL_ROLLOUTS_UCTP, textFieldUCTP_M));
+		textFieldUCTP_M.setText(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTP.name()));
+		textFieldUCTP_M.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTP_M = new GridBagConstraints();
+		gbc_textFieldUCTP_M.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTP_M.insets = new Insets(0, 0, 5, 0);
+		gbc_textFieldUCTP_M.gridx = 6;
+		gbc_textFieldUCTP_M.gridy = 9;
+		panel_1.add(textFieldUCTP_M, gbc_textFieldUCTP_M);
 		
 		JButton btnSelectAll = new JButton("All");
 		btnSelectAll.addActionListener(new ActionListener(){
@@ -918,6 +956,30 @@ public class CtpGui extends CtpAppConstants{
 		panel_1.add(label_58, gbc_label_58);
 		
 		algorithmsRun = new JTextField();
+		algorithmsRun.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try{
+					String strValue = algorithmsRun.getText();
+					int value = Integer.parseInt(strValue);
+					if(value < 1){throw new NumberFormatException("negative values are not allowed");}
+					prop.setProperty(PropKeys.ALGORITHMS_RUN.name(), strValue);
+					if(value != 1){
+						String lblText = "   Agorithms are going to be run x times.";
+						lblAgorithmsRun.setText(lblText.replace("x", strValue));
+					}else{
+						lblAgorithmsRun.setText("   Agorithms are going to be run 1 time.");
+					}
+					saveProp();
+				} catch(Exception e1){
+					if(e1 instanceof NumberFormatException){
+						lblAgorithmsRun.setText("Number of runs. Please enter positive integer.");
+					}
+				} catch (Throwable e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+		algorithmsRun.setToolTipText("Pls enter positive integer value.\r\nAfter click on Set button to confirm.");
 		algorithmsRun.setText(prop.getProperty(PropKeys.ALGORITHMS_RUN.name()));
 		algorithmsRun.setColumns(10);
 		GridBagConstraints gbc_algorithmsRun = new GridBagConstraints();
@@ -986,13 +1048,19 @@ public class CtpGui extends CtpAppConstants{
 		lblTable.setBackground(SystemColor.controlShadow);
 		
 		JButton btnNewButton = new JButton("Export to xls");
+		btnNewButton.setToolTipText("Exports data to .xls file in chosen location.");
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				JButton save = new JButton();
 				JFileChooser fc = new JFileChooser();
 				fc.setDialogTitle("Save File");
-				fc.setCurrentDirectory(new File(System.getProperty("user.dir") + SEPARATOR + "results" ));
+				fc.setCurrentDirectory(new File(prop.getProperty(PropKeys.DEFAULT_EXPORT_FOLDER.name())));
 				fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+				if(rdbtnYes.isSelected()){
+					String [] sourceParts = prop.getProperty(PropKeys.SOURCE_FILE.name()).split(SEPARATOR + SEPARATOR);
+					String sourceFile = sourceParts[sourceParts.length - 1];
+					fc.setSelectedFile(new File(fc.getCurrentDirectory().toString() + SEPARATOR + sourceFile + "_" + String.valueOf(runsMade)));
+				}
 				if(fc.showSaveDialog(save) == JFileChooser.APPROVE_OPTION){
 					String fileName = fc.getSelectedFile().getName();
 					String path = fc.getSelectedFile().getParentFile().getPath();
@@ -1005,9 +1073,9 @@ public class CtpGui extends CtpAppConstants{
 					}
 
 					if(ext.equals(".xls")){
-						file = path + "\\" + fileName; 
+						file = path + SEPARATOR + fileName; 
 					}else{
-						file = path + "\\" + fileName + ".xls"; 
+						file = path + SEPARATOR + fileName + ".xls"; 
 					}
 					ResultsTable.exportToXls(new File(file));
 				}
@@ -1042,76 +1110,225 @@ public class CtpGui extends CtpAppConstants{
 		
 		JPanel panel_2 = new JPanel();
 		tabbedPane.addTab("App Settings", null, panel_2, null);
+		GridBagLayout gbl_panel_2 = new GridBagLayout();
+		gbl_panel_2.columnWidths = new int[]{5, 124, 74, 86, 349, 0};
+		gbl_panel_2.rowHeights = new int[]{32, 27, 27, 27, 27, 27, 27, 27, 0, 0};
+		gbl_panel_2.columnWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+		gbl_panel_2.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+		panel_2.setLayout(gbl_panel_2);
+		
+		JLabel lblCommonSettings = new JLabel("Common settings");
+		lblCommonSettings.setVerticalAlignment(SwingConstants.BOTTOM);
+		lblCommonSettings.setFont(new Font("Tahoma", Font.BOLD, 13));
+		lblCommonSettings.setBackground(SystemColor.controlShadow);
+		GridBagConstraints gbc_lblCommonSettings = new GridBagConstraints();
+		gbc_lblCommonSettings.anchor = GridBagConstraints.WEST;
+		gbc_lblCommonSettings.insets = new Insets(0, 0, 5, 5);
+		gbc_lblCommonSettings.gridx = 1;
+		gbc_lblCommonSettings.gridy = 0;
+		panel_2.add(lblCommonSettings, gbc_lblCommonSettings);
+		
+		JLabel lblDefaultGraphSource = new JLabel("Default graph source folder:");
+		lblDefaultGraphSource.setVerticalAlignment(SwingConstants.TOP);
+		GridBagConstraints gbc_lblDefaultGraphSource = new GridBagConstraints();
+		gbc_lblDefaultGraphSource.anchor = GridBagConstraints.EAST;
+		gbc_lblDefaultGraphSource.insets = new Insets(0, 0, 5, 5);
+		gbc_lblDefaultGraphSource.gridx = 1;
+		gbc_lblDefaultGraphSource.gridy = 1;
+		panel_2.add(lblDefaultGraphSource, gbc_lblDefaultGraphSource);
+		
+		txtDefaultSourceFolder = new JTextField();
+		txtDefaultSourceFolder.setText(prop.getProperty(PropKeys.DEFAULT_SOURCE_FOLDER.name()));
+		txtDefaultSourceFolder.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				prop.setProperty(PropKeys.DEFAULT_SOURCE_FOLDER.name(),txtDefaultSourceFolder.getText());
+				try {
+					saveProp();
+				} catch (Throwable e1) {
+					LOG.error(e1);
+					e1.printStackTrace();
+				}
+			}
+		});
+		txtDefaultSourceFolder.setColumns(10);
+		GridBagConstraints gbc_txtDefaultSourceFolder = new GridBagConstraints();
+		gbc_txtDefaultSourceFolder.fill = GridBagConstraints.BOTH;
+		gbc_txtDefaultSourceFolder.anchor = GridBagConstraints.WEST;
+		gbc_txtDefaultSourceFolder.gridwidth = 3;
+		gbc_txtDefaultSourceFolder.insets = new Insets(0, 0, 5, 5);
+		gbc_txtDefaultSourceFolder.gridx = 2;
+		gbc_txtDefaultSourceFolder.gridy = 1;
+		panel_2.add(txtDefaultSourceFolder, gbc_txtDefaultSourceFolder);
+		
+		JLabel lblDefaultExportFolder = new JLabel("Default export folder:");
+		GridBagConstraints gbc_lblDefaultExportFolder = new GridBagConstraints();
+		gbc_lblDefaultExportFolder.anchor = GridBagConstraints.WEST;
+		gbc_lblDefaultExportFolder.insets = new Insets(0, 0, 5, 5);
+		gbc_lblDefaultExportFolder.gridx = 1;
+		gbc_lblDefaultExportFolder.gridy = 2;
+		panel_2.add(lblDefaultExportFolder, gbc_lblDefaultExportFolder);
+		
+		txtDefaultExportFolder = new JTextField();
+		txtDefaultExportFolder.setText(prop.getProperty(PropKeys.DEFAULT_EXPORT_FOLDER.name()));
+		txtDefaultExportFolder.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				prop.setProperty(PropKeys.DEFAULT_EXPORT_FOLDER.name(),txtDefaultExportFolder.getText());
+				try {
+					saveProp();
+				} catch (Throwable e1) {
+					LOG.error(e1);
+					e1.printStackTrace();
+				}
+			}
+		});
+		txtDefaultExportFolder.setColumns(10);
+		GridBagConstraints gbc_txtDefaultExportFolder = new GridBagConstraints();
+		gbc_txtDefaultExportFolder.fill = GridBagConstraints.BOTH;
+		gbc_txtDefaultExportFolder.anchor = GridBagConstraints.WEST;
+		gbc_txtDefaultExportFolder.gridwidth = 3;
+		gbc_txtDefaultExportFolder.insets = new Insets(0, 0, 5, 5);
+		gbc_txtDefaultExportFolder.gridx = 2;
+		gbc_txtDefaultExportFolder.gridy = 2;
+		panel_2.add(txtDefaultExportFolder, gbc_txtDefaultExportFolder);
+		
+		JLabel lblDefaultxlsName = new JLabel("Default .xls name");
+		GridBagConstraints gbc_lblDefaultxlsName = new GridBagConstraints();
+		gbc_lblDefaultxlsName.anchor = GridBagConstraints.WEST;
+		gbc_lblDefaultxlsName.insets = new Insets(0, 0, 5, 5);
+		gbc_lblDefaultxlsName.gridx = 1;
+		gbc_lblDefaultxlsName.gridy = 3;
+		panel_2.add(lblDefaultxlsName, gbc_lblDefaultxlsName);
+		
+		rdbtnYes = new JRadioButton("Yes", true);
+		rdbtnYes.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				prop.setProperty(PropKeys.DEFAULT_XLS_NAME_ON.name(), "1");
+				try {
+					saveProp();
+				} catch (Throwable e1) {
+					LOG.error(e1);
+					e1.printStackTrace();
+				}
+			}
+		});
+		bgDefaultXlsName.add(rdbtnYes);
+		GridBagConstraints gbc_rdbtnYes = new GridBagConstraints();
+		gbc_rdbtnYes.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnYes.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnYes.gridx = 2;
+		gbc_rdbtnYes.gridy = 3;
+		panel_2.add(rdbtnYes, gbc_rdbtnYes);
+		
+		JRadioButton rdbtnNo = new JRadioButton("No", false);
+		rdbtnNo.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				prop.setProperty(PropKeys.DEFAULT_XLS_NAME_ON.name(), "0");
+				try {
+					saveProp();
+				} catch (Throwable e1) {
+					LOG.error(e1);
+					e1.printStackTrace();
+				}
+			}
+		});
+		bgDefaultXlsName.add(rdbtnNo);
+		GridBagConstraints gbc_rdbtnNo = new GridBagConstraints();
+		gbc_rdbtnNo.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnNo.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnNo.gridx = 3;
+		gbc_rdbtnNo.gridy = 3;
+		panel_2.add(rdbtnNo, gbc_rdbtnNo);
+		
+		if(prop.getProperty(PropKeys.DEFAULT_XLS_NAME_ON.name()).contains("0")){
+			rdbtnNo.setSelected(true);
+		}
 		
 		JLabel lblLogLevel = new JLabel("Log level");
+		GridBagConstraints gbc_lblLogLevel = new GridBagConstraints();
+		gbc_lblLogLevel.anchor = GridBagConstraints.WEST;
+		gbc_lblLogLevel.insets = new Insets(0, 0, 5, 5);
+		gbc_lblLogLevel.gridx = 1;
+		gbc_lblLogLevel.gridy = 4;
+		panel_2.add(lblLogLevel, gbc_lblLogLevel);
+		
+		rdbtnInfo = new JRadioButton("Info",true);
+		bgLogLevel.add(rdbtnInfo);
+		GridBagConstraints gbc_rdbtnInfo = new GridBagConstraints();
+		gbc_rdbtnInfo.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnInfo.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnInfo.gridx = 2;
+		gbc_rdbtnInfo.gridy = 4;
+		panel_2.add(rdbtnInfo, gbc_rdbtnInfo);
+		JRadioButton rdbtnDebug = new JRadioButton("Debug", false);
+		bgLogLevel.add(rdbtnDebug);
+		GridBagConstraints gbc_rdbtnDebug = new GridBagConstraints();
+		gbc_rdbtnDebug.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnDebug.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnDebug.gridx = 3;
+		gbc_rdbtnDebug.gridy = 4;
+		panel_2.add(rdbtnDebug, gbc_rdbtnDebug);
+		
+		JLabel lblVisualiserSettings = new JLabel("Visualiser settings");
+		lblVisualiserSettings.setVerticalAlignment(SwingConstants.BOTTOM);
+		lblVisualiserSettings.setFont(new Font("Tahoma", Font.BOLD, 13));
+		lblVisualiserSettings.setBackground(SystemColor.controlShadow);
+		GridBagConstraints gbc_lblVisualiserSettings = new GridBagConstraints();
+		gbc_lblVisualiserSettings.anchor = GridBagConstraints.WEST;
+		gbc_lblVisualiserSettings.insets = new Insets(0, 0, 5, 5);
+		gbc_lblVisualiserSettings.gridx = 1;
+		gbc_lblVisualiserSettings.gridy = 5;
+		panel_2.add(lblVisualiserSettings, gbc_lblVisualiserSettings);
 		
 		JLabel lblVisualiserWidth = new JLabel("Visualiser width:");
+		GridBagConstraints gbc_lblVisualiserWidth = new GridBagConstraints();
+		gbc_lblVisualiserWidth.anchor = GridBagConstraints.WEST;
+		gbc_lblVisualiserWidth.insets = new Insets(0, 0, 5, 5);
+		gbc_lblVisualiserWidth.gridx = 1;
+		gbc_lblVisualiserWidth.gridy = 6;
+		panel_2.add(lblVisualiserWidth, gbc_lblVisualiserWidth);
 		
 		txtVisualiserWidth = new JTextField();
 		txtVisualiserWidth.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_WIDTH, txtVisualiserWidth));
 		txtVisualiserWidth.setText(prop.getProperty(PropKeys.VISUALISER_WIDTH.name()));
 		txtVisualiserWidth.setColumns(10);
+		GridBagConstraints gbc_txtVisualiserWidth = new GridBagConstraints();
+		gbc_txtVisualiserWidth.fill = GridBagConstraints.BOTH;
+		gbc_txtVisualiserWidth.anchor = GridBagConstraints.NORTHWEST;
+		gbc_txtVisualiserWidth.insets = new Insets(0, 0, 5, 5);
+		gbc_txtVisualiserWidth.gridx = 2;
+		gbc_txtVisualiserWidth.gridy = 6;
+		panel_2.add(txtVisualiserWidth, gbc_txtVisualiserWidth);
 		
 		JLabel lblVisualiserHeight = new JLabel("Visualiser height:");
+		GridBagConstraints gbc_lblVisualiserHeight = new GridBagConstraints();
+		gbc_lblVisualiserHeight.anchor = GridBagConstraints.WEST;
+		gbc_lblVisualiserHeight.insets = new Insets(0, 0, 5, 5);
+		gbc_lblVisualiserHeight.gridx = 1;
+		gbc_lblVisualiserHeight.gridy = 7;
+		panel_2.add(lblVisualiserHeight, gbc_lblVisualiserHeight);
 		
 		txtVisualiserHeight = new JTextField();
 		txtVisualiserHeight.addActionListener(new TextFieldIntegerListener(PropKeys.VISUALISER_HEIGHT, txtVisualiserHeight));
 		txtVisualiserHeight.setText(prop.getProperty(PropKeys.VISUALISER_HEIGHT.name()));
 		txtVisualiserHeight.setColumns(10);
-		
-		rdbtnInfo = new JRadioButton("INFO",true);
-		JRadioButton rdbtnDebug = new JRadioButton("DEBUG", false);
-		bgLogLevel.add(rdbtnDebug);
-		bgLogLevel.add(rdbtnInfo);
-		
-		
-		GroupLayout gl_panel_2 = new GroupLayout(panel_2);
-		gl_panel_2.setHorizontalGroup(
-			gl_panel_2.createParallelGroup(Alignment.LEADING)
-				.addGroup(gl_panel_2.createSequentialGroup()
-					.addGap(21)
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING)
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addComponent(lblLogLevel)
-							.addPreferredGap(ComponentPlacement.UNRELATED)
-							.addComponent(rdbtnInfo)
-							.addPreferredGap(ComponentPlacement.RELATED)
-							.addComponent(rdbtnDebug))
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING, false)
-								.addComponent(lblVisualiserWidth, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-								.addComponent(lblVisualiserHeight, GroupLayout.DEFAULT_SIZE, 113, Short.MAX_VALUE))
-							.addPreferredGap(ComponentPlacement.UNRELATED)
-							.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING, false)
-								.addComponent(txtVisualiserWidth)
-								.addComponent(txtVisualiserHeight))))
-					.addContainerGap(533, Short.MAX_VALUE))
-		);
-		gl_panel_2.setVerticalGroup(
-			gl_panel_2.createParallelGroup(Alignment.LEADING)
-				.addGroup(gl_panel_2.createSequentialGroup()
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.LEADING)
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addGap(27)
-							.addComponent(lblVisualiserWidth))
-						.addGroup(gl_panel_2.createSequentialGroup()
-							.addGap(24)
-							.addComponent(txtVisualiserWidth, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
-					.addPreferredGap(ComponentPlacement.RELATED)
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.BASELINE)
-						.addComponent(lblVisualiserHeight)
-						.addComponent(txtVisualiserHeight, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-					.addGap(11)
-					.addGroup(gl_panel_2.createParallelGroup(Alignment.BASELINE)
-						.addComponent(lblLogLevel)
-						.addComponent(rdbtnInfo)
-						.addComponent(rdbtnDebug))
-					.addContainerGap(283, Short.MAX_VALUE))
-		);
-		panel_2.setLayout(gl_panel_2);
+		GridBagConstraints gbc_txtVisualiserHeight = new GridBagConstraints();
+		gbc_txtVisualiserHeight.fill = GridBagConstraints.BOTH;
+		gbc_txtVisualiserHeight.anchor = GridBagConstraints.NORTHWEST;
+		gbc_txtVisualiserHeight.insets = new Insets(0, 0, 5, 5);
+		gbc_txtVisualiserHeight.gridx = 2;
+		gbc_txtVisualiserHeight.gridy = 7;
+		panel_2.add(txtVisualiserHeight, gbc_txtVisualiserHeight);
 		frmCanadianTravellerProblem.getContentPane().setLayout(groupLayout);
 	}
 	
+	private void trySetIcon() {
+		try{
+			frmCanadianTravellerProblem.setIconImage(Toolkit.getDefaultToolkit().getImage(CtpGui.class.getResource("/cz/vut/sf/resources/CanadianIcon.png")));
+		}catch(Exception e){
+			LOG.info("loading icon from: " + CtpGui.class.getResource("/cz/vut/sf/resources/CanadianIcon.png") + " failed");
+		}
+		
+	}
 	protected static void selectAllAlgorithms(boolean b) {
 		rdbtnSPP.setSelected(b);
 		rdbtnGA.setSelected(b);
