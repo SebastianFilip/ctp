@@ -27,7 +27,7 @@ public class BasicCtpParser implements DefaultParser {
 			}
 		}catch(Exception e){
 			throw new CtpException("Exception cause " + e.getClass().getName() + " msg=" + e.getMessage() + "\n"
-					+ "Exception occured while reading line=" + lineNumber + " from file=" + pathToSource);
+					+ "Exception occured while reading line=" + lineNumber + " from file=" + pathToSource + ", current parsed section was: " + currentSection.name());
 		}
 		
 		fillPointList();

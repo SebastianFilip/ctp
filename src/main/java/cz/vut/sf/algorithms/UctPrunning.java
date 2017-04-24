@@ -17,10 +17,10 @@ import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
 public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgorithm{
+	protected int numberOfAdditionalRollouts = 100;
 	protected int numberOfRollouts = 100;
-	protected int numberOfIteration = 100;
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTP, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
+		LOG.info("Starting UCTP, total rollouts = " + numberOfRollouts + ", total additional rollouts = " + numberOfAdditionalRollouts);
 		int blockedEdgesRevealed = 0;
 		
 		while(agent.getCurrentVertex()!=ctp.t){
@@ -52,7 +52,7 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 				continue;
 				}
 			
-			this.doSearch(numberOfIteration, numberOfRollouts);
+			this.doSearch(numberOfRollouts, numberOfAdditionalRollouts);
 			Vertex chosenVtx = this.getBestAction();
 			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			LOG.debug("Chosen vtx = " + chosenVtx + "\n");
@@ -185,20 +185,36 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 		return shortestPath.getWeight();
 	}
 	
+//	public int getNumberOfRollouts() {
+//		return numberOfRollouts;
+//	}
+//
+//	public int getNumberOfIterations() {
+//		return numberOfIteration;
+//	}
+//
+//	public void setNumberOfRollouts(int n) {
+//		this.numberOfRollouts = n;
+//	}
+//
+//	public void setNumberOfIterations(int i) {
+//		this.numberOfIteration = i;
+//	}
+	
+	public int getNumberOfAdditionalRollouts() {
+		return numberOfAdditionalRollouts;
+	}
+
 	public int getNumberOfRollouts() {
 		return numberOfRollouts;
 	}
 
-	public int getNumberOfIterations() {
-		return numberOfIteration;
+	public void setNumberOfAdditionalRollouts(int n) {
+		this.numberOfAdditionalRollouts = n;
 	}
 
-	public void setNumberOfRollouts(int n) {
-		this.numberOfRollouts = n;
-	}
-
-	public void setNumberOfIterations(int i) {
-		this.numberOfIteration = i;
+	public void setNumberOfRollouts(int i) {
+		this.numberOfRollouts = i;
 	}
 
 }

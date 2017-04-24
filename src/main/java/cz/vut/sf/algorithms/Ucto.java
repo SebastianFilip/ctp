@@ -18,11 +18,11 @@ import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
 public class Ucto extends AbstractUctAlgorithm{
-	private int additionalFakeRollouts = 10;
+//	private int additionalFakeRollouts = 10;
 	
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTO, total rollouts = " + numberOfIteration + ", additional rollouts = " + additionalFakeRollouts);
+		LOG.info("Starting UCTO, total rollouts = " + numberOfRollouts + ", additional rollouts = " + numberOfAdditionalRollouts);
 		Result result = super.solve(ctp, agent);
 		result.msg = "UCTO";
 		return result;
@@ -106,10 +106,9 @@ public class Ucto extends AbstractUctAlgorithm{
 			return Double.MAX_VALUE;
 		}
 		double result = 0;
-		double totalExpectedCost = child.getData().totalExpectedCost 
-				+ additionalFakeRollouts * getDijkstraPathWeight(child.getData().vtx);
-		double totalVisits = child.getData().visitsMade + additionalFakeRollouts;
-		double bias = (child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade)/10;
+		double totalExpectedCost = child.getData().totalExpectedCost;
+		double totalVisits = child.getData().visitsMade;
+		double bias = (child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade) / 10;
 //		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
 		result -= totalExpectedCost/totalVisits;
 		result += bias*Math.sqrt(Math.log(child.getParent().getData().visitsMade)/child.getData().visitsMade);
@@ -148,23 +147,19 @@ public class Ucto extends AbstractUctAlgorithm{
 		return result;	
 	}
 
+	public int getNumberOfAdditionalRollouts() {
+		return numberOfAdditionalRollouts;
+	}
+
 	public int getNumberOfRollouts() {
 		return numberOfRollouts;
 	}
 
-	public int getNumberOfIterations() {
-		return numberOfIteration;
+	public void setNumberOfAdditionalRollouts(int n) {
+		this.numberOfAdditionalRollouts = n;
 	}
 
-	public void setNumberOfRollouts(int n) {
-		this.numberOfRollouts = n;
-	}
-
-	public void setNumberOfIterations(int i) {
-		this.numberOfIteration = i;
-	}
-	
-	public void setAdditionalFakeRollouts(int m){
-		this.additionalFakeRollouts = m;
+	public void setNumberOfRollouts(int i) {
+		this.numberOfRollouts = i;
 	}
 }

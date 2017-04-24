@@ -3,6 +3,8 @@ package cz.vut.sf.parsers;
 import java.awt.Point;
 import java.util.List;
 
+import cz.vut.sf.graph.CtpException;
+
 
 // all list should have the same size
 public class ParsedDTO {
@@ -12,9 +14,24 @@ public class ParsedDTO {
 	public List<List<Double>> penaltyList;
 	public List<Point> pointList;
 	
-	public boolean validateSize(){
+	public void validateSize(){
 		int rows = adjacencyList.size();
-		return(rows ==weightsList.size() && rows == probabilitiesList.size() && rows == penaltyList.size());
+		if(!(rows == weightsList.size() && rows == probabilitiesList.size())){
+			throw new CtpException("Source file has inconsistent data. EDGE_DIRECTIONS_SECTION size is not equal with EDGE_WEIGHT_SECTION or PROBABILITY_SECTION size.");
+		}
+		for(int i = 0; i < adjacencyList.size(); i++){
+			if(adjacencyList.get(i).size() != weightsList.get(i).size()){
+				throw new CtpException("Source file has inconsistent data. EDGE_DIRECTIONS_SECTION element #"
+						+ (i+1) + " size is not equal with EDGE_WEIGHT_SECTION size.");
+			}
+		}
+		
+		for(int i = 0; i < adjacencyList.size(); i++){
+			if(adjacencyList.get(i).size() != probabilitiesList.get(i).size()){
+				throw new CtpException("Source file has inconsistent data. EDGE_DIRECTIONS_SECTION element #"
+						+ (i+1) + " size is not equal with PROBABILITY_SECTION size.");
+			}
+		}
 	}
 	
 	public ParsedDTO(List<List<Integer>> adjancyList, List<List<Double>> weightsList,

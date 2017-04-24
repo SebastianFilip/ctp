@@ -8,13 +8,12 @@ import cz.vut.sf.ctp.AbstractMonteCarloTreeSearch;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.CtpException;
-import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
 public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch implements UctAlgorithm {
-	protected int numberOfRollouts = 1;
-	protected int numberOfIteration = 1000;
+	protected int numberOfAdditionalRollouts = 1;
+	protected int numberOfRollouts = 1000;
 	
 	public Result solve(DefaultCtp ctp, Agent agent) {
 		int blockedEdgesRevealed = 0;
@@ -48,7 +47,7 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 				continue;
 			}
 			
-			this.doSearch(numberOfIteration, numberOfRollouts);
+			this.doSearch(numberOfRollouts, numberOfAdditionalRollouts);
 			Vertex chosenVtx = this.getBestAction();
 			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			LOG.debug("Chosen vtx = " + chosenVtx);
@@ -76,10 +75,9 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 		double expectedMinCost = Double.MAX_VALUE;
 		for(int i = 0; i < children.size(); i++){
 			//if proposed vtx is not terminal the length of its edge muse be added
-			double additionalValue = getAdditionalValue(children.get(i).getData());
 	    	double totalCost = children.get(i).getData().totalExpectedCost;
 	    	int totalIteration = children.get(i).getData().visitsMade;
-			double averageCost = totalCost/totalIteration + additionalValue;
+			double averageCost = totalCost/totalIteration;
 			LOG.debug("average cost for [" + children.get(i).getData().vtx 
 					+"] is : "+ averageCost + 
 					" visits made:" + totalIteration);
@@ -90,14 +88,5 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 			}
 		}
 		return result;
-	}
-	
-	private double getAdditionalValue(VtxDTO data) {
-		// return edge weight from data.vtx to its parent.data.vtx
-		if(data.vtx == this.graph.getTerminalVtx()){
-			return 0;
-		}
-		StochasticWeightedEdge edge = this.getGraph().getEdge(this.root.getData().vtx, data.vtx);
-		return this.getGraph().getEdgeWeight(edge);
 	}
 }

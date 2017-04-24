@@ -121,18 +121,17 @@ public class CtpRunner extends CtpAppConstants {
 						break;
 					case UCTB:
 						Uctb uctb = new Uctb();
-						uctb.setNumberOfRollouts(1);
+						uctb.setNumberOfAdditionalRollouts(1);
 						int n = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
-						uctb.setNumberOfIterations(n);
+						uctb.setNumberOfRollouts(n);
 						r = uctb.solve(ctp, new Agent(ctp.s));
 						break;
 					case UCTO:
 						Ucto ucto = new Ucto();
-						ucto.setNumberOfRollouts(1);
 						int n1 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTO.name()));
 						int m1 = Integer.parseInt(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name()));
-						ucto.setNumberOfIterations(n1);
-						ucto.setAdditionalFakeRollouts(m1);
+						ucto.setNumberOfRollouts(n1);
+						ucto.setNumberOfAdditionalRollouts(m1);
 						r = ucto.solve(ctp, new Agent(ctp.s));
 						break;
 					case UCTB2:
@@ -142,9 +141,9 @@ public class CtpRunner extends CtpAppConstants {
 					case UCTP:
 						UctPrunning uctp = new UctPrunning();
 						int nr = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTP.name()));
-						int ni = Integer.parseInt(prop.getProperty(PropKeys.ITERATIONS_UCTP.name()));
+						int na = Integer.parseInt(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTP.name()));
 						uctp.setNumberOfRollouts(nr);
-						uctp.setNumberOfIterations(ni);
+						uctp.setNumberOfAdditionalRollouts(na);
 						r = uctp.solve(ctp, new Agent(ctp.s));
 						break;
 					}

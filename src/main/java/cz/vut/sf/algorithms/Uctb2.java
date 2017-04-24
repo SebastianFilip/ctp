@@ -15,7 +15,7 @@ public class Uctb2 extends Uctb {
 	
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTB2, total rollouts = " + numberOfRollouts + ", total iteration = " + numberOfIteration);
+		LOG.info("Starting UCTB2, total rollouts = " + numberOfAdditionalRollouts + ", total iteration = " + numberOfRollouts);
 		int blockedEdgesRevealed = 0;
 		
 		while(agent.getCurrentVertex()!=ctp.t){
@@ -47,7 +47,7 @@ public class Uctb2 extends Uctb {
 				continue;
 				}
 			
-			this.doSearch(numberOfIteration, numberOfRollouts);
+			this.doSearch(numberOfRollouts, numberOfAdditionalRollouts);
 			Vertex chosenVtx = this.getBestAction();
 			LOG.debug("Chosen vtx = " + chosenVtx);
 			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
@@ -81,7 +81,6 @@ public class Uctb2 extends Uctb {
 			}
 			//finish route by Dijkstra
 			rolloutedGraph.removeAllBlockedEdges();
-			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
 			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
 			shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());
 
