@@ -2,7 +2,9 @@ package cz.vut.sf.algorithms;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
@@ -19,6 +21,7 @@ import cz.vut.sf.graph.Vertex;
 
 public class Ucto extends AbstractUctAlgorithm{
 //	private int additionalFakeRollouts = 10;
+	private Map<RolloutKey, Double[]> additionalRolloutsData = new HashMap<RolloutKey, Double[]>();
 	
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
@@ -105,13 +108,30 @@ public class Ucto extends AbstractUctAlgorithm{
 		if(child.getData().visitsMade == 0){
 			return Double.MAX_VALUE;
 		}
+		//
+		Double[] data = null;
+		if(!additionalRolloutsData.containsKey(new RolloutKey(child.getParent().getData().vtx, child.getData().vtx))){
+			Simulator gaData = rollout(child, numberOfAdditionalRollouts);
+			if(gaData == null){
+				// simulation did not succeeded
+				data = new Double[] {Double.MAX_VALUE / numberOfAdditionalRollouts, 1d};
+			}else{
+				data = new Double[] {gaData.totalCost / gaData.totalIterations, (double) gaData.totalIterations};
+			}
+			LOG.debug("Caching data for evaluating UCT fromula. " + child.getParent().getData().vtx + "<-" + child.getData().vtx + ", avg cost:" + data[0]);
+			additionalRolloutsData.put(new RolloutKey(child.getParent().getData().vtx, child.getData().vtx), data);
+		}else{
+			data = additionalRolloutsData.get(new RolloutKey(child.getParent().getData().vtx, child.getData().vtx));
+		}
+		
 		double result = 0;
 		double totalExpectedCost = child.getData().totalExpectedCost;
 		double totalVisits = child.getData().visitsMade;
 		double bias = (child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade) / 10;
-//		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
+		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
 		result -= totalExpectedCost/totalVisits;
-		result += bias*Math.sqrt(Math.log(child.getParent().getData().visitsMade)/child.getData().visitsMade);
+		result -= data[0] / data[1];
+		result += bias*Math.sqrt(Math.log(child.getParent().getData().visitsMade + data[1])/(child.getData().visitsMade + data[1]));
 //		System.out.println(child.getData().vtx + ", avg=" + totalExpectedCost/totalVisits +" ,UCT value=" + result );
 		return result;
 	}
@@ -161,5 +181,56 @@ public class Ucto extends AbstractUctAlgorithm{
 
 	public void setNumberOfRollouts(int i) {
 		this.numberOfRollouts = i;
+	}
+	
+	private class RolloutKey{
+		public final Vertex parent;
+		// child must not be null ever
+		public final Vertex child;
+		
+		public RolloutKey(Vertex p, Vertex ch){
+			parent = p;
+			child = ch;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			if(parent == null){
+				return prime * child.hashCode();
+			}
+			result = prime * (parent.hashCode() + child.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			RolloutKey other = (RolloutKey) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (child == null) {
+				if (other.child != null)
+					return false;
+			} else if (!child.equals(other.child))
+				return false;
+			if (parent == null) {
+				if (other.parent != null)
+					return false;
+			} else if (!parent.equals(other.parent))
+				return false;
+			return true;
+		}
+
+		private Ucto getOuterType() {
+			return Ucto.this;
+		}
+		
 	}
 }

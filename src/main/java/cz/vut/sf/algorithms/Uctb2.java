@@ -15,7 +15,7 @@ public class Uctb2 extends Uctb {
 	
 	@Override
 	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTB2, total rollouts = " + numberOfAdditionalRollouts + ", total iteration = " + numberOfRollouts);
+		LOG.info("Starting UCTB2, total rollouts = " +numberOfRollouts);
 		int blockedEdgesRevealed = 0;
 		
 		while(agent.getCurrentVertex()!=ctp.t){
@@ -83,7 +83,10 @@ public class Uctb2 extends Uctb {
 			rolloutedGraph.removeAllBlockedEdges();
 			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
 			shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());
-
+			if(shortestPath == null){
+				LOG.debug("In rollouted graph there were no path to terminal vtx. Skipping rollout...");
+				continue;
+			}
 			simulator.totalCost += travellingAgent.getTotalCost() + shortestPath.getWeight();
 			simulator.totalIterations ++;
 		}while(currentRollout < additionalSimulation);

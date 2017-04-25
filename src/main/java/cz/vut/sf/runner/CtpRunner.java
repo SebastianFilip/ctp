@@ -100,8 +100,13 @@ public class CtpRunner extends CtpAppConstants {
 				    	r = ga.solve(ctp, new Agent(ctp.s));
 						break;
 					case RA:
-						RepositionAlgorithm ra = new RepositionAlgorithm();
-				    	r = ra.solve(ctp, new Agent(ctp.s));
+//						RepositionAlgorithm ra = new RepositionAlgorithm();
+//				    	r = ra.solve(ctp, new Agent(ctp.s));
+						Uctb2 uctb2 = new Uctb2();
+						uctb2.setNumberOfAdditionalRollouts(1);
+						int nUctb2 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
+						uctb2.setNumberOfRollouts(nUctb2);
+						r = uctb2.solve(ctp, new Agent(ctp.s));
 						break;
 					case CA:
 						ComparisionAlgorithm ca = new ComparisionAlgorithm();
@@ -124,7 +129,7 @@ public class CtpRunner extends CtpAppConstants {
 						uctb.setNumberOfAdditionalRollouts(1);
 						int n = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
 						uctb.setNumberOfRollouts(n);
-						r = uctb.solve(ctp, new Agent(ctp.s));
+						r = uctb.solve(ctp, new Agent(ctp.s));						
 						break;
 					case UCTO:
 						Ucto ucto = new Ucto();
@@ -135,8 +140,11 @@ public class CtpRunner extends CtpAppConstants {
 						r = ucto.solve(ctp, new Agent(ctp.s));
 						break;
 					case UCTB2:
-						Uctb2 uctb2 = new Uctb2();
-						r = uctb2.solve(ctp, new Agent(ctp.s));
+//						Uctb2 uctb2 = new Uctb2();
+//						uctb2.setNumberOfAdditionalRollouts(1);
+//						int nUctb2 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
+//						uctb2.setNumberOfRollouts(nUctb2);
+//						r = uctb2.solve(ctp, new Agent(ctp.s));
 						break;
 					case UCTP:
 						UctPrunning uctp = new UctPrunning();

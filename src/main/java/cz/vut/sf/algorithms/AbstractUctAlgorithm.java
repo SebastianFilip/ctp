@@ -47,7 +47,7 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 				continue;
 			}
 			
-			this.doSearch(numberOfRollouts, numberOfAdditionalRollouts);
+			this.doSearch(numberOfRollouts, 1);
 			Vertex chosenVtx = this.getBestAction();
 			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			LOG.debug("Chosen vtx = " + chosenVtx);
@@ -66,6 +66,7 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 		if(doSimulation(simulator,node.getData().vtx ,additionalSimulation)){
 			return simulator;
 		}
+		LOG.debug("rollout returns simulator = null");
 		return null;
 	}
 	

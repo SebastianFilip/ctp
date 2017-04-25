@@ -39,20 +39,29 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 	 */
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
 	
-	protected void backPropagation(TreeNode<VtxDTO> fromNode, Simulator data){
-		final double totalPropagatedValue = fromNode.getData().totalExpectedCost += data.totalCost / data.totalIterations;
+	protected void backPropagation(final TreeNode<VtxDTO> fromNode, Simulator data){
+		final double propagatedValue = fromNode.getData().totalExpectedCost += data.totalCost / data.totalIterations;
 		final int totalVisitsOfExplored  = ++fromNode.getData().visitsMade;
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append(fromNode.getData().vtx );
-		do {
-			sb.append("<-" + fromNode.getParent().getData().vtx);
-			
-			fromNode.getParent().getData().totalExpectedCost += totalPropagatedValue/totalVisitsOfExplored;
-			fromNode.getParent().getData().visitsMade ++;
-			fromNode = fromNode.getParent();
-		}while(fromNode.getParent()!=null);
-		LOG.debug("back propagation for "+ sb.toString() + " = " + totalPropagatedValue/totalVisitsOfExplored);
+//		fromNode.getParent().getData().totalExpectedCost += (propagatedValue/totalVisitsOfExplored);
+//		fromNode.getParent().getData().visitsMade ++;
+//		sb.append("<-" + fromNode.getParent().getData().vtx);
+		
+		TreeNode<VtxDTO> node = fromNode.getParent();
+		double propValueAddWeight = 0;
+		while(node.getParent() != null){
+			sb.append("<-" + node.getData().vtx);
+			propValueAddWeight += this.getGraph().getEdgeWeight(this.getGraph().getEdge(node.getData().vtx, node.getParent().getData().vtx));
+			node.getData().totalExpectedCost += (propagatedValue/totalVisitsOfExplored + propValueAddWeight);
+			node.getData().visitsMade ++;
+			node = node.getParent();
+		}
+		sb.append("<-" + node.getData().vtx);
+		node.getData().totalExpectedCost += (propagatedValue/totalVisitsOfExplored + propValueAddWeight);
+		node.getData().visitsMade ++;
+		LOG.debug("back propagation for "+ sb.toString() + " = " + propagatedValue/totalVisitsOfExplored);
 	}
 		
 	public void doSearch(final int numberOfIteration, final int numberOfRollouts){
