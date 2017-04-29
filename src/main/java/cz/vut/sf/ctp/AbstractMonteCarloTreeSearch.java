@@ -7,10 +7,10 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 import cz.vut.sf.gui.LoggerClass;
-import cz.vut.sf.algorithms.RolloutAble;
+import cz.vut.sf.algorithms.SimulateAble;
 import cz.vut.sf.ctp.VtxDTO;
 
-public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implements RolloutAble{
+public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implements SimulateAble{
 	protected StochasticWeightedGraph graph;
 	protected TreeNode<VtxDTO> root;
 
@@ -45,9 +45,6 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append(fromNode.getData().vtx );
-//		fromNode.getParent().getData().totalExpectedCost += (propagatedValue/totalVisitsOfExplored);
-//		fromNode.getParent().getData().visitsMade ++;
-//		sb.append("<-" + fromNode.getParent().getData().vtx);
 		
 		TreeNode<VtxDTO> node = fromNode.getParent();
 		double propValueAddWeight = 0;
@@ -61,7 +58,9 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 		sb.append("<-" + node.getData().vtx);
 		node.getData().totalExpectedCost += (propagatedValue/totalVisitsOfExplored + propValueAddWeight);
 		node.getData().visitsMade ++;
-		LOG.debug("back propagation for "+ sb.toString() + " = " + propagatedValue/totalVisitsOfExplored);
+		if(LOG.isDebugEnabled()){
+			LOG.debug("back propagation for "+ sb.toString() + " = " + propagatedValue/totalVisitsOfExplored);
+		}
 	}
 		
 	public void doSearch(final int numberOfIteration, final int numberOfRollouts){
@@ -74,7 +73,7 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 			}
 			
 			if(currentNode.getData().visitsMade == 0){
-				rolloutData = rollout(currentNode, numberOfRollouts);
+				rolloutData = simulateTravelsal(currentNode, numberOfRollouts);
 			}else{
 				if(!checkTerminalNode(currentNode)){
 					expandNode(currentNode);
@@ -89,7 +88,7 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 					}
 					currentNode = pickNode(currentNode);
 				}
-				rolloutData = rollout(currentNode, numberOfRollouts);
+				rolloutData = simulateTravelsal(currentNode, numberOfRollouts);
 			}
 			// if rolloutData == null then, rollout was unsuccessful (bad weather)
 			if(rolloutData != null){
@@ -114,9 +113,8 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 			temp.setData(new VtxDTO(child));
 			currentNode.addChild(temp);
 		}
-		
-		
 	}
+	
 	/**
 	 * Expands children of currentNode, Vertex parent will not be new child of currentNode
 	 * set parent = null if you want to expand all of the children
@@ -135,6 +133,6 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 		}
 	}
 	
-	public abstract Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts);
+	public abstract Simulator simulateTravelsal(TreeNode<VtxDTO> node, int numberOfRollouts);
 	
 }

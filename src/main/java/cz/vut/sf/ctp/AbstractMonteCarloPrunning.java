@@ -23,7 +23,7 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
 	
 	@Override
-	public abstract Simulator rollout(TreeNode<VtxDTO> node, int numberOfRollouts);
+	public abstract Simulator simulateTravelsal(TreeNode<VtxDTO> node, int numberOfRollouts);
 	
 	@Override
 	public void doSearch(final int numberOfIteration, final int numberOfRollouts){
@@ -38,13 +38,15 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 			while(!currentNode.isLeafNode()){
 				currentNode = pickNode(currentNode);
 				if(!pathToRoot.add(currentNode.getData().vtx)){
-					LOG.debug("Exploring vtx:" + currentNode.toString() + ", is already on path to root!");
+					if(LOG.isDebugEnabled()){
+						LOG.debug("Exploring vtx:" + currentNode.toString() + ", is already on path to root!");
+					}
 					innerCycle = true;
 				}
 			}
 			
 			if(currentNode.getData().visitsMade == 0){
-				rolloutData = rollout(currentNode, numberOfRollouts);
+				rolloutData = simulateTravelsal(currentNode, numberOfRollouts);
 				// for the first visit save data to expandedVtx map, except for terminal vtx
 
 			}else{
@@ -52,7 +54,9 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 					expandNode(currentNode, currentNode.getParent().getData().vtx, root.getData().vtx);
 					if(currentNode.isLeafNode()){
 						// dead end of tree, set expected cost so high it will not be explored again
-						LOG.debug("dead end of search tree for " + currentNode.getData().vtx + ", parent " + currentNode.getParent().getData().vtx);
+						if(LOG.isDebugEnabled()){
+							LOG.debug("dead end of search tree for " + currentNode.getData().vtx + ", parent " + currentNode.getParent().getData().vtx);
+						}
 						currentNode.getData().totalExpectedCost += Double.MAX_VALUE/numberOfIteration;
 						if(currentNode.getData().totalExpectedCost < Double.MAX_VALUE/numberOfIteration){
 							throw new CtpException("Double overflow!");
@@ -61,11 +65,13 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 					}
 					currentNode = pickNode(currentNode);
 					if(!pathToRoot.add(currentNode.getData().vtx)){
-						LOG.debug("Exploring vtx:" + currentNode.toString() + ", is already on path to root!");
+						if(LOG.isDebugEnabled()){
+							LOG.debug("Exploring vtx:" + currentNode.toString() + ", is already on path to root!");
+						}
 						innerCycle = true;
 					}
 				}
-				rolloutData = rollout(currentNode, numberOfRollouts);
+				rolloutData = simulateTravelsal(currentNode, numberOfRollouts);
 			}
 			// if rolloutData == null then, rollout was unsuccessful (bad weather)
 			if(rolloutData != null){
@@ -89,7 +95,9 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 				if(!innerCycle){
 					doPrunning(expandedVtx.get(currentNode.getData().vtx),dto, currentNode.getData().vtx);
 				}else{
-					LOG.debug("Inner cycle! Pruning vtx: " + currentNode.getData().vtx + ", with parent: " + dto.parent);
+					if(LOG.isDebugEnabled()){
+						LOG.debug("Inner cycle! Pruning vtx: " + currentNode.getData().vtx + ", with parent: " + dto.parent);
+					}
 					prune(dto, expandedVtx.get(currentNode.getData().vtx), currentNode.getData().vtx);
 				}
 			}else{
@@ -111,8 +119,10 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 			pruneDto = newDto;
 			dtoToKeep = oldDto;
 		}
-		LOG.debug("Prunning vtx: " + doubler + ", with parent: " + pruneDto.parent);
-		LOG.debug("Keeping vtx: " + doubler + ", with parent: " + dtoToKeep.parent);
+		if(LOG.isDebugEnabled()){
+			LOG.debug("Prunning vtx: " + doubler + ", with parent: " + pruneDto.parent);
+			LOG.debug("Keeping vtx: " + doubler + ", with parent: " + dtoToKeep.parent);
+		}
 
 		prune(pruneDto, dtoToKeep, doubler);
 		expandedVtx.put(doubler, dtoToKeep);
@@ -154,7 +164,9 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 		while(parentOfCurrent.getChildren().isEmpty()){
 			if(parentOfCurrent.getParent() == null){LOG.info("null parent mby root?!!");}
 			removeVtxNodeFromParentNodeTree(parentOfCurrent.getData().vtx, parentOfCurrent.getParent());
-			LOG.debug("Removing also vtx: " + parentOfCurrent.getData().vtx + ", since it was childless");
+			if(LOG.isDebugEnabled()){
+				LOG.debug("Removing also vtx: " + parentOfCurrent.getData().vtx + ", since it was childless");
+			}
 			expandedVtx.remove(parentOfCurrent.getData().vtx);
 			parentOfCurrent = parentOfCurrent.getParent();
 		}
@@ -174,7 +186,10 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 			propagationNode.getParent().getData().visitsMade += visitsToPropagate;
 			propagationNode = propagationNode.getParent();
 		}
-		LOG.debug("re-propagation for "+ sb.toString() + ": " + valueToPropagate + "/" + visitsToPropagate +" = " + valueToPropagate/visitsToPropagate);
+		if(LOG.isDebugEnabled()){
+			LOG.debug("re-propagation for "+ sb.toString() + ": " + valueToPropagate 
+					+ "/" + visitsToPropagate +" = " + valueToPropagate/visitsToPropagate);
+		}
 	}
 
 	private List<TreeNode<VtxDTO>>  removeVtxNodeFromParentNodeTree(final Vertex vtx, TreeNode<VtxDTO> parentNode) {
@@ -187,14 +202,18 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 				
 				if(child.getChildren() != null && !child.getChildren().isEmpty()){
 					result = child.getChildren();
-					LOG.debug("Vtx to remove: " + vtx + ", has " + result.size() +" child(ren)!");
+					if(LOG.isDebugEnabled()){
+						LOG.debug("Vtx to remove: " + vtx + ", has " + result.size() +" child(ren)!");
+					}
 				}
 				iterator.remove();
 				wasRemoved = true;
 				break;
 			}
 		}
-		LOG.debug(vtx + " removed=" + wasRemoved);
+		if(LOG.isDebugEnabled()){
+			LOG.debug(vtx + " removed=" + wasRemoved);
+		}
 		return result;
 	}
 
@@ -284,7 +303,9 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 				open.push(children.get(i)); 
 			}
 		}
-		LOG.warn("There were no element:" + required + " with parent:"+ parent +" within tree (by Depth First Search)");
+		if(LOG.isDebugEnabled()){
+			LOG.debug("There were no element:" + required + " with parent:"+ parent +" within tree (by Depth First Search)");	
+		}
 		return null;
 	}
 	

@@ -50,7 +50,9 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 			this.doSearch(numberOfRollouts, 1);
 			Vertex chosenVtx = this.getBestAction();
 			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
-			LOG.debug("Chosen vtx = " + chosenVtx);
+			if(LOG.isDebugEnabled()){
+				LOG.debug("Chosen vtx = " + chosenVtx);
+			}
 		}
 		return new Result(agent, "Rollout Based Algorithm");
 	}
@@ -61,7 +63,7 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent);
 
 	@Override
-	public Simulator rollout(TreeNode<VtxDTO> node, int additionalSimulation) {		
+	public Simulator simulateTravelsal(TreeNode<VtxDTO> node, int additionalSimulation) {		
 		Simulator simulator = new Simulator(node.getParent().getData().vtx);
 		if(doSimulation(simulator,node.getData().vtx ,additionalSimulation)){
 			return simulator;

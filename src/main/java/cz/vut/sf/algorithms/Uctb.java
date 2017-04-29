@@ -49,8 +49,7 @@ public class Uctb extends AbstractUctAlgorithm{
 		}
 		double result = 0;
 		double bias = child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade;
-//		bias *= 10;
-//		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
+		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
 		result -= child.getData().totalExpectedCost/child.getData().visitsMade;
 		result += bias*Math.sqrt(Math.log10(child.getParent().getData().visitsMade)/child.getData().visitsMade);
 		return result;

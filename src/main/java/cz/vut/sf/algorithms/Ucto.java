@@ -111,14 +111,16 @@ public class Ucto extends AbstractUctAlgorithm{
 		//
 		Double[] data = null;
 		if(!additionalRolloutsData.containsKey(new RolloutKey(child.getParent().getData().vtx, child.getData().vtx))){
-			Simulator gaData = rollout(child, numberOfAdditionalRollouts);
+			Simulator gaData = simulateTravelsal(child, numberOfAdditionalRollouts);
 			if(gaData == null){
 				// simulation did not succeeded
 				data = new Double[] {Double.MAX_VALUE / numberOfAdditionalRollouts, 1d};
 			}else{
 				data = new Double[] {gaData.totalCost / gaData.totalIterations, (double) gaData.totalIterations};
 			}
-			LOG.debug("Caching data for evaluating UCT fromula. " + child.getParent().getData().vtx + "<-" + child.getData().vtx + ", avg cost:" + data[0]);
+			if(LOG.isDebugEnabled()){
+				LOG.debug("Caching data for evaluating UCT fromula. " + child.getParent().getData().vtx + "<-" + child.getData().vtx + ", avg cost:" + data[0]);
+			}
 			additionalRolloutsData.put(new RolloutKey(child.getParent().getData().vtx, child.getData().vtx), data);
 		}else{
 			data = additionalRolloutsData.get(new RolloutKey(child.getParent().getData().vtx, child.getData().vtx));
@@ -127,7 +129,8 @@ public class Ucto extends AbstractUctAlgorithm{
 		double result = 0;
 		double totalExpectedCost = child.getData().totalExpectedCost;
 		double totalVisits = child.getData().visitsMade;
-		double bias = (child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade) / 10;
+		double bias = (child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade);
+		bias = bias*10;
 		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
 		result -= totalExpectedCost/totalVisits;
 		result -= data[0] / data[1];

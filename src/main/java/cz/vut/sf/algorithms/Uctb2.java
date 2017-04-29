@@ -1,5 +1,6 @@
 package cz.vut.sf.algorithms;
 
+
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 

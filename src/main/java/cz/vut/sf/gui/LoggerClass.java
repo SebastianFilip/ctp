@@ -33,8 +33,10 @@ public abstract class LoggerClass {
 			String timeStr = (new SimpleDateFormat("HH:mm:ss")).format(time);
 			if(event.getLevel() == Level.INFO){
 				jTextArea.append(" ["  + timeStr + "] INFO  " + event.getMessage().toString());
-			}else{
+			}else if(event.getLevel() == Level.DEBUG){
 				jTextArea.append(" ["  + timeStr + "] DEBUG " + event.getMessage().toString());
+			}else{
+				jTextArea.append(" ["  + timeStr + "] ERROR " + event.getMessage().toString());
 			}
 			jTextArea.append("\n");
 		}

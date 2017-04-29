@@ -138,7 +138,7 @@ public class Agent {
 			Vertex target) {
 		StochasticWeightedEdge chosenEdge = g.getEdge(this.currentVertex, target);
 		if(chosenEdge == null){
-			throw new CtpException("Specified vtx: " + target + " is not adjancent to cur_ctx: " + this.currentVertex);
+			throw new CtpException("Specified vtx: " + target + " is not adjancent to cur_vtx: " + this.currentVertex);
 		}
 		if(chosenEdge.beliefState == State.UNKNOWN){
 			throw new CtpException("Agent's method 'traverseToAdjancetVtx' called for edge which belief state: UNKNOWN");

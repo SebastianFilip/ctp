@@ -20,6 +20,7 @@ import cz.vut.sf.algorithms.UctPrunning;
 import cz.vut.sf.algorithms.Uctb;
 import cz.vut.sf.algorithms.Uctb2;
 import cz.vut.sf.algorithms.Ucto;
+import cz.vut.sf.algorithms.UctoNew;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedGraph;
@@ -63,7 +64,15 @@ public class CtpRunner extends CtpAppConstants {
     		LOG.info(logMsgSeparator);
     		LOG.info(logMsg);
     		LOG.info(logMsgSeparator);
-    		List<Result> runResult = runAlgorithms(ctp, algorithms);
+    		List<Result> runResult = null;
+			try {
+				runResult = runAlgorithms(ctp, algorithms);
+			} catch (Exception e) {
+				LOG.info("Run ended by unexpected exception!");
+				LOG.info(e);
+				e.printStackTrace();
+				return results;
+			}
     		if(stop){
     			return results;
     		}
@@ -77,7 +86,7 @@ public class CtpRunner extends CtpAppConstants {
     	return results;
     }
 
-	private static List<Result> runAlgorithms(DefaultCtp ctp, List<AlgNames> algorithms) {
+	private static List<Result> runAlgorithms(DefaultCtp ctp, List<AlgNames> algorithms) throws Exception {
 		List<Result> result = new ArrayList<Result>();
 		try {
 			for(AlgNames algorithm : algorithms){
@@ -132,7 +141,7 @@ public class CtpRunner extends CtpAppConstants {
 						r = uctb.solve(ctp, new Agent(ctp.s));						
 						break;
 					case UCTO:
-						Ucto ucto = new Ucto();
+						UctoNew ucto = new UctoNew();
 						int n1 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTO.name()));
 						int m1 = Integer.parseInt(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name()));
 						ucto.setNumberOfRollouts(n1);
@@ -165,7 +174,7 @@ public class CtpRunner extends CtpAppConstants {
 				ctp.g = graphClone;
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw e;
 		}
 		return result;
 	}
