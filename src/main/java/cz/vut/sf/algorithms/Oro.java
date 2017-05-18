@@ -9,7 +9,6 @@ import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
-import cz.vut.sf.gui.LoggerClass;
 /**
  * 
  * @author Seba
@@ -19,9 +18,14 @@ import cz.vut.sf.gui.LoggerClass;
  * then it simulate traversal optimistically (by Greedy Algorithm), 
  * action with the lowest expected mean value will be chosen.
  */
-public class Oro extends LoggerClass implements DefaultCtpAlgorithm {
+public class Oro extends DefaultCtpAlgorithm {
+	public Oro(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+
 	private int totalRollouts = 100;
-	public Result solve(DefaultCtp ctp, Agent agent) {
+	@Override
+	public Result solve() {
 		LOG.info("Starting ORO, total rollouts = " + totalRollouts);
 		Vertex chosenVtx = null;
     	try {

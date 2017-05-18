@@ -9,18 +9,20 @@ import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultEdge;
 
-import cz.vut.sf.algorithms.ComparisionAlgorithm;
+import cz.vut.sf.algorithms.ComparisonAlgorithm;
+import cz.vut.sf.algorithms.DefaultCtpAlgorithm;
 import cz.vut.sf.algorithms.GraphChecker;
 import cz.vut.sf.algorithms.GreedyAlgorithm;
 import cz.vut.sf.algorithms.Hop;
 import cz.vut.sf.algorithms.Oro;
 import cz.vut.sf.algorithms.RepositionAlgorithm;
 import cz.vut.sf.algorithms.Result;
+import cz.vut.sf.algorithms.UctAlgorithm;
 import cz.vut.sf.algorithms.UctPrunning;
-import cz.vut.sf.algorithms.Uctb;
 import cz.vut.sf.algorithms.Uctb2;
+import cz.vut.sf.algorithms.Uctb;
+import cz.vut.sf.algorithms.Ucto2;
 import cz.vut.sf.algorithms.Ucto;
-import cz.vut.sf.algorithms.UctoNew;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedGraph;
@@ -39,11 +41,13 @@ public class CtpRunner extends CtpAppConstants {
     	//Instantiate CTP
     	StochasticWeightedGraph g;
     	g = new StochasticWeightedGraph(StochasticWeightedEdge.class, graphData);
-    	
+    	if(LOG.isDebugEnabled()){
+    		LOG.debug("Out of 1000 times this graph was generated " + GraphChecker.countFailedRollouts(graphData, 1000) + " time(s) not connected");
+    	}
     	Vertex s = g.getSourceVtx();
     	Vertex t = g.getTerminalVtx();
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
-    	if(!new GraphChecker().isGraphConnected(g)){
+    	if(!GraphChecker.isGraphConnected(g)){
     		LOG.info("Generated graph was not connected, pls try again.");
     		LOG.info(g.toString());
     		return;
@@ -88,6 +92,7 @@ public class CtpRunner extends CtpAppConstants {
 
 	private static List<Result> runAlgorithms(DefaultCtp ctp, List<AlgNames> algorithms) throws Exception {
 		List<Result> result = new ArrayList<Result>();
+		boolean timeLimitationOn = Boolean.parseBoolean(prop.getProperty(PropKeys.TIME_LIMITATION_ON.name()));
 		try {
 			for(AlgNames algorithm : algorithms){
 				long startTime = System.nanoTime();
@@ -105,63 +110,71 @@ public class CtpRunner extends CtpAppConstants {
 				    	r = new Result(a, "Dijkstra");
 						break;
 					case GA:
-						GreedyAlgorithm ga = new GreedyAlgorithm();
-				    	r = ga.solve(ctp, new Agent(ctp.s));
+						DefaultCtpAlgorithm ga = new GreedyAlgorithm(ctp, new Agent(ctp.s));
+				    	r = ga.solve();
 						break;
 					case RA:
-//						RepositionAlgorithm ra = new RepositionAlgorithm();
-//				    	r = ra.solve(ctp, new Agent(ctp.s));
-						Uctb2 uctb2 = new Uctb2();
-						uctb2.setNumberOfAdditionalRollouts(1);
-						int nUctb2 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
-						uctb2.setNumberOfRollouts(nUctb2);
-						r = uctb2.solve(ctp, new Agent(ctp.s));
+						DefaultCtpAlgorithm ra = new RepositionAlgorithm(ctp, new Agent(ctp.s));
+				    	r = ra.solve();
 						break;
 					case CA:
-						ComparisionAlgorithm ca = new ComparisionAlgorithm();
-						r = ca.solve(ctp, new Agent(ctp.s));
+						DefaultCtpAlgorithm ca = new ComparisonAlgorithm(ctp, new Agent(ctp.s));
+						r = ca.solve();
 						break;
 					case HOP:
-						Hop hop = new Hop();
+						Hop hop = new Hop(ctp, new Agent(ctp.s));
 						int nHop = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_HOP.name()));
 						hop.setTotalRollouts(nHop);
-						r = hop.solve(ctp, new Agent(ctp.s));
+						r = hop.solve();
 						break;
 					case ORO:
-						Oro oro = new Oro();
+						Oro oro = new Oro(ctp, new Agent(ctp.s));
 						int nOro = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_ORO.name()));
 						oro.setTotalRollouts(nOro);
-						r = oro.solve(ctp, new Agent(ctp.s));
+						r = oro.solve();
 						break;
 					case UCTB:
-						Uctb uctb = new Uctb();
+						Uctb uctb = new Uctb(ctp, new Agent(ctp.s));
+						setTimeLimitation(timeLimitationOn, uctb);
 						uctb.setNumberOfAdditionalRollouts(1);
 						int n = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
-						uctb.setNumberOfRollouts(n);
-						r = uctb.solve(ctp, new Agent(ctp.s));						
+						uctb.setNumberOfIterations(n);
+						r = uctb.solve();						
 						break;
 					case UCTO:
-						UctoNew ucto = new UctoNew();
+						Ucto ucto = new Ucto(ctp, new Agent(ctp.s));
+						setTimeLimitation(timeLimitationOn, ucto);
 						int n1 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTO.name()));
 						int m1 = Integer.parseInt(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name()));
-						ucto.setNumberOfRollouts(n1);
+						ucto.setNumberOfIterations(n1);
 						ucto.setNumberOfAdditionalRollouts(m1);
-						r = ucto.solve(ctp, new Agent(ctp.s));
+						r = ucto.solve();
+						break;
+					case UCTO2:
+						Ucto2 ucto2 = new Ucto2(ctp, new Agent(ctp.s));
+						setTimeLimitation(timeLimitationOn, ucto2);
+						int n2 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTO2.name()));
+						int m2 = Integer.parseInt(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO2.name()));
+						ucto2.setNumberOfIterations(n2);
+						ucto2.setNumberOfAdditionalRollouts(m2);
+						r = ucto2.solve();
 						break;
 					case UCTB2:
-//						Uctb2 uctb2 = new Uctb2();
-//						uctb2.setNumberOfAdditionalRollouts(1);
-//						int nUctb2 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
-//						uctb2.setNumberOfRollouts(nUctb2);
-//						r = uctb2.solve(ctp, new Agent(ctp.s));
+						Uctb2 uctb2 = new Uctb2(ctp, new Agent(ctp.s));
+						setTimeLimitation(timeLimitationOn, uctb2);
+						uctb2.setNumberOfAdditionalRollouts(1);
+						int nUctb2 = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
+						uctb2.setNumberOfIterations(nUctb2);
+						r = uctb2.solve();
 						break;
 					case UCTP:
-						UctPrunning uctp = new UctPrunning();
+						UctPrunning uctp = new UctPrunning(ctp, new Agent(ctp.s));
+						setTimeLimitation(timeLimitationOn, uctp);
 						int nr = Integer.parseInt(prop.getProperty(PropKeys.ROLLOUTS_UCTP.name()));
 						int na = Integer.parseInt(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTP.name()));
-						uctp.setNumberOfRollouts(nr);
+						uctp.setNumberOfIterations(nr);
 						uctp.setNumberOfAdditionalRollouts(na);
-						r = uctp.solve(ctp, new Agent(ctp.s));
+						r = uctp.solve();
 						break;
 					}
 				r.timeElapsed = (long) ((System.nanoTime() - startTime)/1E6);
@@ -180,6 +193,13 @@ public class CtpRunner extends CtpAppConstants {
 	}
 	
 	
+	private static void setTimeLimitation(boolean timeLimitationOn, UctAlgorithm uct) {
+		if(timeLimitationOn){
+			long timeToDecision = Long.parseLong(prop.getProperty(PropKeys.TIME_TO_DECISION_FOR_UCT.name()));
+			uct.setTimeToDecision(timeToDecision);
+		}
+	}
+
 	public static boolean isLogInfo(){
 		return CtpGui.rdbtnInfo.isSelected();
 	}

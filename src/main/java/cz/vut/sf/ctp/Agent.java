@@ -37,6 +37,12 @@ public class Agent {
 		return traversalHistory.get(index);
 	}
 	
+	public Vertex getPreviousVertex(){
+		int index = traversalHistory.size()-2;
+		if(index < 0)return null;
+		return traversalHistory.get(index);
+	}
+	
 	public double getTotalCost(){
 		return totalCost;
 	}

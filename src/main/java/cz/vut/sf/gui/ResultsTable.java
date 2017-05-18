@@ -11,13 +11,14 @@ public class ResultsTable extends CtpAppConstants {
 	private static String[][] data = null;
 	private static double [] colCostSums = null;
 	private static double [] colTimeSums = null;
+	private static int [] colIterationsSums = null;
 	public static DefaultTableModel model = new DefaultTableModel();
 	
 	private static void setHeader(String[] headers){
 		// fill headers
 		header[0] = "run #";
 		for (int i= 1; i< header.length; i++){
-			header[i] = ctpResults.get(i-1).msg;
+			header[i] = ctpResults.get(i-1).resultName;
 		}
 		
 		model.setColumnIdentifiers(header);
@@ -26,6 +27,7 @@ public class ResultsTable extends CtpAppConstants {
 	private static void setData(){
 		colCostSums = new double [header.length - 1];
 		colTimeSums = new double [header.length - 1];
+		colIterationsSums = new int [header.length - 1];
 		for (int row = 0; row < runsMade; row++){
 			data[row][0] = String.valueOf(row + 1);
 			int index = (row) * (header.length - 1);
@@ -34,6 +36,9 @@ public class ResultsTable extends CtpAppConstants {
 				data[row][col] = String.valueOf(costPaid);
 				colCostSums[col-1] += costPaid;
 				colTimeSums[col-1] += (double) ctpResults.get(index + col - 1).timeElapsed/1000;
+				if(ctpResults.get(index + col - 1).iterationMade != null){
+					colIterationsSums[col-1] += ctpResults.get(index + col - 1).iterationMade;
+				}
 			}
 		}
 		setAvg();
@@ -42,16 +47,28 @@ public class ResultsTable extends CtpAppConstants {
 	
 	private static void setAvg() {
 		//Avg travel cost
-		int row = data.length -2;
+		int row = data.length -3;
 		data[row][0] = "Avg Cost";
 		for(int col = 1; col < header.length; col++){
-			data[row][col] = String.valueOf(colCostSums[col-1] / runsMade);
+			data[row][col] = String.format("%.2f",colCostSums[col-1] / runsMade).replace(",", ".");
 		}
 		//Avg computational time (s)
 		row++;
 		data[row][0] = "Avg Time";
 		for(int col = 1; col < header.length; col++){
 			data[row][col] = String.format("%.2f",colTimeSums[col-1] / runsMade).replace(",", ".");
+		}
+		//Avg iterations made
+		if(!Boolean.valueOf(prop.getProperty(PropKeys.TIME_LIMITATION_ON.name())))
+			return;
+		row++;
+		data[row][0] = "Avg Iterations";
+		for(int col = 1; col < header.length; col++){
+			if(colIterationsSums[col-1]!=0){
+				data[row][col] = String.valueOf(Math.round((double)colIterationsSums[col-1]/runsMade));
+			}else{
+				data[row][col] = " - ";
+			}
 		}
 	}
 
@@ -61,8 +78,8 @@ public class ResultsTable extends CtpAppConstants {
 		}
 		header = new String[columnsToCreate + 1];
 		setHeader(header);
-		// +2 columns for avg values
-		data = new String[runsMade + 2][columnsToCreate + 1];
+		// +3 columns for avg values
+		data = new String[runsMade + 3][columnsToCreate + 1];
 		setData();
 	}
 	
@@ -80,11 +97,39 @@ public class ResultsTable extends CtpAppConstants {
 	            }
 	            excel.write("\n");
 	        }
-
+	        
+	        writeSettingsValues(excel);
+	        
 	        excel.close();
 	        
 		} catch (IOException e) {
 			LOG.error(e);
+		}
+	}
+
+	private static void writeSettingsValues(FileWriter excel) throws IOException {
+		excel.write("\n");
+		excel.write("Settings");
+		excel.write("\n");
+		PropKeys[] keys = PropKeys.values();
+		for(int i = 0; i < keys.length; i++){
+			PropKeys key = keys[i];
+			String value = prop.getProperty(key.name());
+			switch (key){
+			case ROLLOUTS_HOP:
+			case ROLLOUTS_ORO:
+			case ROLLOUTS_UCTO:
+			case ROLLOUTS_UCTO2:
+			case ROLLOUTS_UCTP:
+			case ADDITIONAL_ROLLOUTS_UCTO:
+			case ADDITIONAL_ROLLOUTS_UCTP:
+			case ADDITIONAL_ROLLOUTS_UCTO2:
+			case TIME_LIMITATION_ON:
+			case TIME_TO_DECISION_FOR_UCT:
+				excel.write(key.toString() + "\t" + value + "\n");
+			default:
+				break;
+			}
 		}
 	}
 }

@@ -7,11 +7,15 @@ import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.Vertex;
-import cz.vut.sf.gui.LoggerClass;
 
-public class RepositionAlgorithm extends LoggerClass implements DefaultCtpAlgorithm {
+public class RepositionAlgorithm extends DefaultCtpAlgorithm {
 
-	public Result solve(DefaultCtp ctp, Agent agent) {
+	public RepositionAlgorithm(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+
+	@Override
+	public Result solve() {
 		LOG.info("Starting Reposition Algorithm");
 		agent.senseAction(ctp.g);
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;

@@ -3,13 +3,17 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 
+import org.jgrapht.GraphPath;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
+
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedEdge.State;
 import cz.vut.sf.graph.Vertex;
+import cz.vut.sf.parsers.ParsedDTO;
 
 public class GraphChecker{
-	public boolean isGraphConnected(StochasticWeightedGraph g){
+	public static boolean isGraphConnected(StochasticWeightedGraph g){
 		Set<Vertex> visitedVertexes = new HashSet<Vertex>();
 		
 		Stack <Vertex> open = new Stack<Vertex>();
@@ -36,5 +40,20 @@ public class GraphChecker{
 		}while(!open.empty());
 //		System.out.println("is connected: "+result);
 		return result;
+	}
+	
+	public static int countFailedRollouts(ParsedDTO parsedDto, int totalTries){
+		StochasticWeightedGraph rolloutedGraph = null;
+		int failedTimes = 0;
+		for(int i = 0; i < totalTries; i++){
+			rolloutedGraph = new StochasticWeightedGraph(StochasticWeightedEdge.class, parsedDto);
+			rolloutedGraph.removeAllBlockedEdges();
+			DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
+	    	GraphPath<Vertex, StochasticWeightedEdge> shortestPath = dsp.getPath(rolloutedGraph.getSourceVtx(), rolloutedGraph.getTerminalVtx());
+			if(shortestPath == null){
+				failedTimes++;
+			}
+		}
+		return failedTimes;
 	}
 }

@@ -1,16 +1,14 @@
 package cz.vut.sf.algorithms;
 
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
-import cz.vut.sf.ctp.AbstractMonteCarloPrunning;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.CtpException;
@@ -19,15 +17,24 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgorithm{
+public class UctPrunning extends AbstractTreeSearchWidthPruning implements UctAlgorithm{
+	public UctPrunning(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
 	protected int numberOfAdditionalRollouts = 100;
-	protected int numberOfRollouts = 100;
-	private Set<Vertex> expandedHistory = new HashSet<Vertex>(); 
+	protected int numberOfIterations = 100;
+	protected long timeToDecision = 0;
+	private OptimisticUctFormula uctFormula = new OptimisticUctFormula(this.graph, this.root);
+	private int iterationsMade = 0;
+	//historyCache always contains only one previous vtx with its second choice if there were more than 10 visits
+	private HistoryCache historyCache = new HistoryCache();
 	
-	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTP, total rollouts = " + numberOfRollouts + ", total additional rollouts = " + numberOfAdditionalRollouts);
+	@Override
+	public Result solve() {
+		LOG.info("Starting UCTP, total iterations = " + numberOfIterations + ", total rollouts = " + numberOfAdditionalRollouts);
 		int blockedEdgesRevealed = 0;
-		
+		this.setGraph(ctp.g);
+		boolean isPreviousVtxCached = false;
 		while(agent.getCurrentVertex()!=ctp.t){
 			//If graph changes all of the children of current vertex should be expanded (explored)
 			boolean isGraphChanged = false;
@@ -36,43 +43,93 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 			if(blockedEdgesRevealed != ctp.g.getBlockedEdgesRevealed()){
 				blockedEdgesRevealed = ctp.g.getBlockedEdgesRevealed();
 				isGraphChanged = true;
-				expandedHistory = new HashSet<Vertex>();
+				uctFormula.setGraph(ctp.g);
+				this.setGraph(ctp.g);
+				uctFormula.clearCachedData();
 			}
 			
 			this.setRoot(agent.getCurrentVertex());
-			this.setGraph(ctp.g);
+			uctFormula.setRoot(root);
+			
 			if(LOG.isDebugEnabled()){
 				LOG.debug("Expanding root = "+ this.getRoot().getData().vtx +", except for parent = " + agent.getPreviousVertex(isGraphChanged));
 			}
-			this.expandNode(this.getRoot(), agent.getPreviousVertex(isGraphChanged), agent.getCurrentVertex());
+			this.expandNode(this.getRoot(), agent.getPreviousVertex(!isPreviousVtxCached));
 			
-			if(this.getRoot().getChildren().isEmpty()){
-				//this means that algorithm choose to travel to vtx about which knew that is dead end
-				LOG.error("This should never happen!! Chosen vtx(dead end) = " + agent.getPreviousVertex(true));
-				throw new CtpException("Uct choose to go to dead end vtx");
+			if(getTimeToDecision() == 0){
+				iterationsMade += this.doSearch(numberOfIterations, numberOfAdditionalRollouts);
+			}else{
+				iterationsMade += this.doSearch(numberOfIterations, numberOfAdditionalRollouts, getTimeToDecision());
 			}
-			if(this.getRoot().getChildren().size() == 1){
-				//there is only one possible child -> go through it
+			
+			Vertex vtxBeforeTraverse = agent.getCurrentVertex();
+			Vertex previousVtx = agent.getPreviousVertex();
+			if(previousVtx!= null && historyCache.isPreviouslyVisited(previousVtx)){
+				TreeNode<VtxDTO> nodeToAdd = new TreeNode<VtxDTO>(root);
+				VtxDTO data = new VtxDTO(previousVtx);
+				data.totalExpectedCost = historyCache.getAvgCost(previousVtx) * historyCache.getPenalizationMultiplyier();
+				data.visitsMade = 1;
+				nodeToAdd.setData(data);
+				root.getChildren().add(nodeToAdd);
+			}
+			Vertex chosenVtx = getNextAction(agent);
+			if(chosenVtx == previousVtx && historyCache.isPreviouslyVisited(chosenVtx)){
 				if(LOG.isDebugEnabled()){
-					LOG.debug("Chosen vtx(only child) = " + this.getRoot().getChildren().get(0).getData().vtx);
+					LOG.debug("UCTP chosen to go back taking data from cachedHistory next moves:" +agent.getCurrentVertex() + "->"+ chosenVtx + "->" + historyCache.getNextAction());
 				}
-				agent.traverseToAdjancetVtx(ctp.g, this.getRoot().getChildren().get(0).getData().vtx);
-				continue;
+				historyCache.increasePenalization();
+				agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
+				agent.traverseToAdjancetVtx(ctp.g, historyCache.getNextAction());
+			}else{
+				agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			}
-			
-			this.doSearch(numberOfRollouts, numberOfAdditionalRollouts);
-			
-			Vertex chosenVtx = this.getBestAction(root.getChildren());
-			expandedHistory.add(agent.getCurrentVertex());
-			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			if(LOG.isDebugEnabled()){
 				LOG.debug("Chosen vtx = " + chosenVtx + "\n");	
 			}
+			historyCache.clearCachedHistory();
+			if(root.getChildren().size()>1){
+				Map<Vertex, Double> secondChoice = getSeconChoiceWithAvgCost(chosenVtx);
+				isPreviousVtxCached = historyCache.actualizeExpandedHistory(secondChoice, vtxBeforeTraverse);
+			}
 //			printTerminationFromExpanded();
 		}
-		return new Result(agent, "UCTP");
+		return new Result(agent, "UCTP", iterationsMade/(agent.getTraversalHistory().size()-1));
 	}
 	
+	private Map<Vertex, Double> getSeconChoiceWithAvgCost(Vertex chosenVtx) {
+		List<TreeNode<VtxDTO>> children = root.getChildren();
+		Vertex secondChoice = null;
+		double expectedMinCost = Double.MAX_VALUE;
+		int visitsMade = 0;
+		for(int i = 0; i < children.size(); i++){
+			if(children.get(i).getData().vtx == chosenVtx){continue;}
+	    	double totalCost = children.get(i).getData().totalExpectedCost;
+	    	int totalIteration = children.get(i).getData().visitsMade;
+			double averageCost = totalCost/totalIteration;
+			if(LOG.isDebugEnabled()){
+				LOG.debug("average cost for [" + children.get(i).getData().vtx 
+					+"] is : "+ averageCost + 
+					" visits made:" + totalIteration);
+			}
+			if(averageCost < expectedMinCost){
+				expectedMinCost = averageCost;
+				visitsMade = children.get(i).getData().visitsMade;
+				secondChoice = children.get(i).getData().vtx;
+			}
+		}
+		// no sense caching history of visited vtx if it was not visit enough (i choose 10 visits is enough)
+		// also making sure that cached vtx will not be 'dead end' there must be at least two edges 
+		// from connection (it is oriented graph) and if there are no more edges that means it is dead end
+		if(secondChoice == null){
+			return null;
+		}else if(visitsMade < 10 && StochasticWeightedGraph.getAdjacentVertexes(secondChoice, this.graph).size() <= 2){
+			return null;
+		}
+		Map<Vertex,Double> result = new HashMap<Vertex,Double>();
+		result.put(secondChoice, new Double(expectedMinCost));
+		return result;
+	}
+
 	@Override
 	public Simulator simulateTravelsal(TreeNode<VtxDTO> node, int numberOfRollouts) {		
 		Simulator simulator = new Simulator(node.getParent().getData().vtx);
@@ -80,6 +137,33 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 			return simulator;
 		}
 		return null;
+	}
+
+	protected Vertex getNextAction(Agent agent){
+		List<TreeNode<VtxDTO>> children = root.getChildren();
+		if(root.getChildren().size() == 1){return root.getChildren().get(0).getData().vtx;}
+		else if(root.getChildren().size() == 0){
+			//'dead end' -> go back
+			return agent.getPreviousVertex();
+		}
+		Vertex result = null;
+		double expectedMinCost = Double.MAX_VALUE;
+		for(int i = 0; i < children.size(); i++){
+			//if proposed vtx is not terminal the length of its edge muse be added
+	    	double totalCost = children.get(i).getData().totalExpectedCost;
+	    	int totalIteration = children.get(i).getData().visitsMade;
+			double averageCost = totalCost/totalIteration;
+			if(LOG.isDebugEnabled()){
+				LOG.debug("average cost for [" + children.get(i).getData().vtx 
+					+"] is : "+ averageCost + 
+					" visits made:" + totalIteration);
+			}
+			if(averageCost < expectedMinCost){
+				expectedMinCost = averageCost;
+				result = children.get(i).getData().vtx;
+			}
+		}
+		return result;
 	}
 	
 	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation) {
@@ -95,71 +179,28 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 			travellingAgent.senseAction(rolloutedGraph);
 			StochasticWeightedEdge edgeFromParentToChild = rolloutedGraph.getEdge(travellingAgent.getCurrentVertex(), vtxWhichIsExplored);
 			if(edgeFromParentToChild==null){
-				//edge is blocked go there by GA
-				//mby later it will be needed to check if graph is connected
-				if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, vtxWhichIsExplored, travellingAgent)){
+				//edge to exploring vtx is blocked use GA from parent instead
+				if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, this.getGraph().getTerminalVtx(), travellingAgent)){
 					//there is no path from current travellingAgent position to vertex which is about to be explored
 					LOG.debug("In rollouted graph there were no path to adjancent vtx. Skipping rollout...");
 					continue;
 				}
 			}else{
+				//finish route by Dijkstra, use its length to estimate cost
 				travellingAgent.traverseToAdjancetVtx(rolloutedGraph, vtxWhichIsExplored);
+				rolloutedGraph.removeAllBlockedEdges();
+				dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
+				shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());if(shortestPath == null){
+					LOG.debug("In rollouted graph there were no path to terminal vtx. Skipping rollout...");
+					continue;
+				}
+				simulator.totalCost += shortestPath.getWeight();
 			}
-			//finish route by Dijkstra
-			rolloutedGraph.removeAllBlockedEdges();
-			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
-			shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());
-			if(shortestPath == null){
-				LOG.debug("In rollouted graph there were no path to terminal vtx. Skipping rollout...");
-				continue;
-			}
-			simulator.totalCost += travellingAgent.getTotalCost() + shortestPath.getWeight();
+			simulator.totalCost += travellingAgent.getTotalCost();
 			simulator.totalIterations ++;
 		}while(currentRollout < additionalSimulation);
 		boolean result = simulator.totalIterations == 0 ? false:true;
 		return result;	
-	}
-	
-	protected Vertex getBestAction(List<TreeNode<VtxDTO>> children){
-		Vertex result = null;
-		double expectedMinCost = Double.MAX_VALUE;
-		for(Iterator<TreeNode<VtxDTO>> i = children.iterator(); i.hasNext();){
-			//if proposed vtx is not terminal the length of its edge muse be added
-			TreeNode<VtxDTO> child = i.next();
-	    	double totalCost = child.getData().totalExpectedCost;
-	    	int totalIteration = child.getData().visitsMade;
-			double averageCost = totalCost/totalIteration;
-			
-			if(LOG.isDebugEnabled()){
-				LOG.debug("average cost for [" + child.getData().vtx 
-						+"] is : "+ averageCost + 
-						" visits made:" + totalIteration);
-			}
-			if(averageCost < expectedMinCost){
-				expectedMinCost = averageCost;
-				result = child.getData().vtx;
-			}
-		}
-		for(Iterator<TreeNode<VtxDTO>> i = children.iterator(); i.hasNext();){
-			//removing chosen child from children list
-			TreeNode<VtxDTO> child = i.next();
-	    	if(child.getData().vtx.equals(result)){
-	    		i.remove();
-	    	}
-		}
-		if(expandedHistory.contains(result)){
-			if(children.isEmpty()){
-				return result;
-			}
-			if(LOG.isDebugEnabled()){
-				LOG.debug("Best vtx already visited and graph has not changed since then, picking another vtx..");
-			}
-			return getBestAction(children);
-		}
-		if(result == null){
-			return null;
-		}
-		return result;
 	}
 
 	@Override
@@ -183,41 +224,29 @@ public class UctPrunning extends AbstractMonteCarloPrunning implements UctAlgori
 	}
 	
 	private double evaluateUctFormula(TreeNode<VtxDTO> child) {
-		if(child.getData().visitsMade == 0){
-			return Double.MAX_VALUE;
-		}
-		double result = 0;
-		double totalExpectedCost = child.getData().totalExpectedCost 
-				+ 20 * getDijkstraPathWeight(child.getData().vtx);
-		double totalVisits = child.getData().visitsMade + 20;
-		double bias = (child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade);
-		bias = bias * 100;
-		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
-		result -= totalExpectedCost/totalVisits;
-		result += bias*Math.sqrt(Math.log(child.getParent().getData().visitsMade)/child.getData().visitsMade);
-		return result;
-	}
-	private double getDijkstraPathWeight(Vertex start){
-		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
-		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
-		dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(this.getGraph());
-		shortestPath = dsp.getPath(start, this.getGraph().getTerminalVtx());
-		return shortestPath.getWeight();
+		return uctFormula.evaluateUctFormula(child, numberOfAdditionalRollouts, 10);
 	}
 	
 	public int getNumberOfAdditionalRollouts() {
 		return numberOfAdditionalRollouts;
 	}
 
-	public int getNumberOfRollouts() {
-		return numberOfRollouts;
+	public int getNumberOfIterations() {
+		return numberOfIterations;
 	}
 
 	public void setNumberOfAdditionalRollouts(int n) {
 		this.numberOfAdditionalRollouts = n;
 	}
 
-	public void setNumberOfRollouts(int i) {
-		this.numberOfRollouts = i;
+	public void setNumberOfIterations(int i) {
+		this.numberOfIterations = i;
+	}
+	
+	public void setTimeToDecision(long miliseconds){
+		timeToDecision = miliseconds;
+	}
+	public long getTimeToDecision(){
+		return timeToDecision;
 	}
 }

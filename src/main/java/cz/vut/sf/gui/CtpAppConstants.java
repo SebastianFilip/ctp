@@ -14,7 +14,7 @@ public class CtpAppConstants extends LoggerClass {
 	public static boolean stop = false;
 	
     public static enum AlgNames{
-    	DIJKSTRA, GA,RA,CA,HOP,ORO,UCTB,UCTO, UCTB2, UCTP;
+    	DIJKSTRA, GA,RA,CA,HOP,ORO,UCTB,UCTO, UCTB2, UCTP, UCTO2;
     }
 	public static final String SEPARATOR = System.getProperty("file.separator");
 	public static Properties prop = new Properties();
@@ -34,12 +34,16 @@ public class CtpAppConstants extends LoggerClass {
 		ROLLOUTS_ORO,
 		ROLLOUTS_UCTB,
 		ROLLOUTS_UCTO,
+		ROLLOUTS_UCTO2,
 		ROLLOUTS_UCTP,
 		ADDITIONAL_ROLLOUTS_UCTP,
 		ADDITIONAL_ROLLOUTS_UCTO,
 		DEFAULT_SOURCE_FOLDER,
 		DEFAULT_EXPORT_FOLDER,
-		DEFAULT_XLS_NAME_ON;
+		DEFAULT_XLS_NAME_ON,
+		TIME_LIMITATION_ON,
+		ADDITIONAL_ROLLOUTS_UCTO2,
+		TIME_TO_DECISION_FOR_UCT;
 		
 	}
 
@@ -62,12 +66,16 @@ public class CtpAppConstants extends LoggerClass {
 		prop.setProperty(PropKeys.ROLLOUTS_ORO.name(), "100");
 		prop.setProperty(PropKeys.ROLLOUTS_UCTB.name(), "100");
 		prop.setProperty(PropKeys.ROLLOUTS_UCTO.name(), "100");
+		prop.setProperty(PropKeys.ROLLOUTS_UCTO2.name(), "100");
 		prop.setProperty(PropKeys.ROLLOUTS_UCTP.name(), "100");
 		prop.setProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTP.name(), "100");
 		prop.setProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO.name(), "20");
+		prop.setProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO2.name(), "20");
 		prop.setProperty(PropKeys.DEFAULT_EXPORT_FOLDER.name(), resourcePath);
 		prop.setProperty(PropKeys.DEFAULT_SOURCE_FOLDER.name(), resourcePath);
 		prop.setProperty(PropKeys.DEFAULT_XLS_NAME_ON.name(), "1");
+		prop.setProperty(PropKeys.TIME_LIMITATION_ON.name(), "False");
+		prop.setProperty(PropKeys.TIME_TO_DECISION_FOR_UCT.name(), "100000");
 	}
 	
 	// variables for Table

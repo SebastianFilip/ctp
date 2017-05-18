@@ -4,7 +4,7 @@
   <groupId>cz.vut.sf</groupId>
   <artifactId>ctp</artifactId>
   <packaging>jar</packaging>
-  <version>v1.0</version>
+  <version>v1.2</version>
   <name>ctp</name>
   <url>http://maven.apache.org</url>
   <dependencies>

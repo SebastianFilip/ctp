@@ -1,4 +1,4 @@
-package cz.vut.sf.ctp;
+package cz.vut.sf.algorithms;
 
 import java.util.ArrayDeque;
 import java.util.HashMap;
@@ -10,12 +10,20 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
 
+import cz.vut.sf.ctp.Agent;
+import cz.vut.sf.ctp.DefaultCtp;
+import cz.vut.sf.ctp.Simulator;
+import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeSearch {
+public abstract class AbstractTreeSearchWidthPruning extends AbstractTreeSearchWidth {
+	public AbstractTreeSearchWidthPruning(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+
 	private static Map<Vertex, ExpandedNodeDTO> expandedVtx = null;
 	Set<Vertex> pathToRoot= null;
 	
@@ -26,11 +34,27 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 	public abstract Simulator simulateTravelsal(TreeNode<VtxDTO> node, int numberOfRollouts);
 	
 	@Override
-	public void doSearch(final int numberOfIteration, final int numberOfRollouts){
+	public int doSearch(final int numberOfIteration, final int numberOfRollouts, final long timeToDecision){
+		long startingTime = (long) (System.nanoTime()/1E6);
+		int iterationsMade = 0;
 		expandedVtx = new HashMap<Vertex, ExpandedNodeDTO>();
 		Simulator rolloutData = null;
 		for(int i=0; i < numberOfIteration; i++){
-			if(root.getChildren().size() == 1){return;}
+			iterationsMade++;
+//			logBestAction(root.getChildren());
+			long timeMakingDecision = (long) (System.nanoTime()/1E6) - startingTime;
+			if(timeMakingDecision > timeToDecision){
+				return iterationsMade;
+			}
+			if(root.getChildren().size() == 1){
+				TreeNode<VtxDTO> onlyChild = root.getChildren().get(0);
+				if(onlyChild.getData().visitsMade == 0){
+					doSimulationForOnlyChild(onlyChild, numberOfRollouts);
+				}
+				return iterationsMade;
+			}else if(root.getChildren().size() == 0){
+				return iterationsMade;
+			}
 			boolean innerCycle = false;
 			TreeNode<VtxDTO> currentNode = root;
 			pathToRoot = new HashSet<Vertex>();
@@ -79,8 +103,14 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 				checkExpandedVtx(rolloutData, currentNode, innerCycle);
 			}
 		}
+		return iterationsMade;
 	}
 	
+	private void doSimulationForOnlyChild(TreeNode<VtxDTO> onlyChild, int numberOfRollouts) {
+		Simulator rolloutData = simulateTravelsal(onlyChild, numberOfRollouts);
+		backPropagation(onlyChild, rolloutData);
+	}
+
 	private void checkExpandedVtx(Simulator rolloutData, TreeNode<VtxDTO> currentNode, boolean innerCycle) {
 		//!checkTerminalNode(currentNode)
 		double expectedCost = rolloutData.totalCost/rolloutData.totalIterations;
@@ -102,7 +132,7 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 				}
 			}else{
 				if(!currentNode.getData().vtx.equals(graph.getTerminalVtx())){
-					LOG.error("THIS SHOULD NOT HAPPEN!!!!!!!!!!!!!!!!!");
+					LOG.error("THIS SHOULD NOT HAPPEN!!!");
 				}
 			}
 		}
@@ -175,23 +205,36 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 	private void reBackPropagateBranch(TreeNode<VtxDTO> childToMove) {
 		final double valueToPropagate = childToMove.getData().totalExpectedCost;
 		final int visitsToPropagate = childToMove.getData().visitsMade;
-		
-		StringBuilder sb = new StringBuilder();
-		sb.append(childToMove.getData().vtx );
-		TreeNode<VtxDTO> propagationNode = childToMove;
-		while(propagationNode.getParent()!=null) {
-			sb.append("<-" + propagationNode.getParent().getData().vtx);
-			
-			propagationNode.getParent().getData().totalExpectedCost += valueToPropagate;
-			propagationNode.getParent().getData().visitsMade += visitsToPropagate;
-			propagationNode = propagationNode.getParent();
-		}
-		if(LOG.isDebugEnabled()){
-			LOG.debug("re-propagation for "+ sb.toString() + ": " + valueToPropagate 
-					+ "/" + visitsToPropagate +" = " + valueToPropagate/visitsToPropagate);
-		}
+		reBackPropagation(childToMove, valueToPropagate, visitsToPropagate);
+//		StringBuilder sb = new StringBuilder();
+//		sb.append(childToMove.getData().vtx );
+//		TreeNode<VtxDTO> propagationNode = childToMove;
+//		while(propagationNode.getParent()!=null) {
+//			sb.append("<-" + propagationNode.getParent().getData().vtx);
+//			//TODO add edge length take care if value to propagate should be -1 or no
+//			propagationNode.getParent().getData().totalExpectedCost += valueToPropagate;
+//			propagationNode.getParent().getData().visitsMade += visitsToPropagate;
+//			propagationNode = propagationNode.getParent();
+//		}
+//		if(LOG.isDebugEnabled()){
+//			LOG.debug("re-propagation for "+ sb.toString() + ": " + valueToPropagate 
+//					+ "/" + visitsToPropagate +" = " + valueToPropagate/visitsToPropagate);
+//		}
 	}
 
+	private void reBackPropagation(final TreeNode<VtxDTO> fromNode,final double propagatedValue,final int totalVisitsOfExplored){
+		TreeNode<VtxDTO> node = fromNode.getParent();
+		double propValueAddWeight = 0;
+		while(node.getParent() != null){
+			propValueAddWeight += this.getGraph().getEdgeWeight(this.getGraph().getEdge(node.getData().vtx, node.getParent().getData().vtx));
+			node.getData().totalExpectedCost += (propagatedValue/totalVisitsOfExplored + propValueAddWeight);
+			node.getData().visitsMade ++;
+			node = node.getParent();
+		}
+		node.getData().totalExpectedCost += (propagatedValue/totalVisitsOfExplored + propValueAddWeight);
+		node.getData().visitsMade ++;
+	}
+	
 	private List<TreeNode<VtxDTO>>  removeVtxNodeFromParentNodeTree(final Vertex vtx, TreeNode<VtxDTO> parentNode) {
 		List<TreeNode<VtxDTO>> result= null;
 		boolean wasRemoved = false;
@@ -232,13 +275,13 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 		return result/devidor;
 	}
 
-	protected void expandNode(TreeNode<VtxDTO> currentNode, Vertex parent, Vertex currentPosition) {
+	private void expandNode(TreeNode<VtxDTO> currentNode, Vertex parent, Vertex rootVtx) {
 		//find all children of parent (parent should not be child)
 		Vertex currentVtx = currentNode.getData().vtx;
 		Set<Vertex> children = StochasticWeightedGraph.getAdjacentVertexes(currentVtx, graph);
 		for(Vertex child: children){
 			if(parent!=null && parent.equals(child))continue;
-			if(parent!=null && currentPosition.equals(child))continue;
+			if(rootVtx.equals(child))continue;
 			TreeNode<VtxDTO> temp = new TreeNode<VtxDTO>(currentNode);
 			temp.setData(new VtxDTO(child));
 			currentNode.addChild(temp);
@@ -332,5 +375,23 @@ public abstract class AbstractMonteCarloPrunning extends AbstractMonteCarloTreeS
 			sb.append(vtxNode.getData().vtx);
 		}
 		LOG.info("trace form t <- s : "+ sb.toString() + ", total avgExpectedCost " + avgSumFromExpanded/iteration);
+	}
+	
+	//for testing purpose
+	protected void logBestAction(List<TreeNode<VtxDTO>> children){
+		for(Iterator<TreeNode<VtxDTO>> i = children.iterator(); i.hasNext();){
+			//if proposed vtx is not terminal the length of its edge muse be added
+			TreeNode<VtxDTO> child = i.next();
+	    	double totalCost = child.getData().totalExpectedCost;
+	    	int totalIteration = child.getData().visitsMade;
+			double averageCost = totalCost/totalIteration;
+			
+			if(true){
+				LOG.info("average cost for [" + child.getData().vtx 
+						+"] is : "+ averageCost + 
+						" visits made:" + totalIteration);
+			}
+
+		}
 	}
 }

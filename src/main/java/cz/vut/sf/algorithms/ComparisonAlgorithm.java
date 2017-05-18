@@ -7,11 +7,14 @@ import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.Vertex;
-import cz.vut.sf.gui.LoggerClass;
 
-public class ComparisionAlgorithm extends LoggerClass implements DefaultCtpAlgorithm {
+public class ComparisonAlgorithm extends DefaultCtpAlgorithm {
 
-	public Result solve(DefaultCtp ctp, Agent agent) {
+	public ComparisonAlgorithm(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+	@Override
+	public Result solve() {
 		LOG.info("Starting Comparision Algorithm");
 		agent.senseAction(ctp.g);
     	

@@ -4,20 +4,26 @@ import java.util.List;
 
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
-import cz.vut.sf.ctp.AbstractMonteCarloTreeSearch;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch implements UctAlgorithm {
+public abstract class AbstractUctWidthAlgorithm extends AbstractTreeSearchWidth implements UctAlgorithm {
+	public AbstractUctWidthAlgorithm(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
 	protected int numberOfAdditionalRollouts = 1;
-	protected int numberOfRollouts = 1000;
+	protected int numberOfIterations = 1000;
+	protected long timeToDecision = 0; // default 100s
+	private int iterationsMade = 0;
+	protected OptimisticUctFormula uctFormula = new OptimisticUctFormula(this.graph, this.root);
 	
-	public Result solve(DefaultCtp ctp, Agent agent) {
+	@Override
+	public Result solve() {
 		int blockedEdgesRevealed = 0;
-		
+		this.setGraph(ctp.g);
 		while(agent.getCurrentVertex()!=ctp.t){
 			//If graph changes all of the children of current vertex should be expanded (explored)
 			boolean isGraphChanged = false;
@@ -25,11 +31,14 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 			
 			if(blockedEdgesRevealed != ctp.g.getBlockedEdgesRevealed()){
 				blockedEdgesRevealed = ctp.g.getBlockedEdgesRevealed();
+				uctFormula.setGraph(ctp.g);
+				uctFormula.clearCachedData();
+				this.setGraph(ctp.g);
 				isGraphChanged = true;
 			}
-			
 			this.setRoot(agent.getCurrentVertex());
-			this.setGraph(ctp.g);
+			uctFormula.setRoot(root);
+			
 			if(this.getRoot().isLeafNode()){
 				LOG.debug("Expanding root = "+ this.getRoot().getData().vtx +", except for parent = " + agent.getPreviousVertex(isGraphChanged));
 				this.expandNode(this.getRoot(), agent.getPreviousVertex(isGraphChanged));
@@ -46,15 +55,18 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 				agent.traverseToAdjancetVtx(ctp.g, this.getRoot().getChildren().get(0).getData().vtx);
 				continue;
 			}
-			
-			this.doSearch(numberOfRollouts, 1);
+			if(getTimeToDecision() == 0){
+				iterationsMade += this.doSearch(numberOfIterations, numberOfAdditionalRollouts);	
+			}else{
+				iterationsMade += this.doSearch(numberOfIterations, numberOfAdditionalRollouts, getTimeToDecision());
+			}
 			Vertex chosenVtx = this.getBestAction();
 			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			if(LOG.isDebugEnabled()){
 				LOG.debug("Chosen vtx = " + chosenVtx);
 			}
 		}
-		return new Result(agent, "Rollout Based Algorithm");
+		return new Result(agent, "Rollout Based Algorithm", iterationsMade/(agent.getTraversalHistory().size()-1));
 	}
 
 	public abstract boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation);
@@ -91,5 +103,28 @@ public abstract class AbstractUctAlgorithm extends AbstractMonteCarloTreeSearch 
 			}
 		}
 		return result;
+	}
+	
+	public int getNumberOfAdditionalRollouts() {
+		return numberOfAdditionalRollouts;
+	}
+
+	public int getNumberOfIterations() {
+		return numberOfIterations;
+	}
+
+	public void setNumberOfAdditionalRollouts(int n) {
+		this.numberOfAdditionalRollouts = n;
+	}
+
+	public void setNumberOfIterations(int i) {
+		this.numberOfIterations = i;
+	}
+	
+	public void setTimeToDecision(long miliseconds){
+		timeToDecision = miliseconds;
+	}
+	public long getTimeToDecision(){
+		return timeToDecision;
 	}
 }

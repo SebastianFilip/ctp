@@ -14,7 +14,6 @@ import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.Vertex;
-import cz.vut.sf.gui.LoggerClass;
 /**
  * 
  * @author Seba
@@ -24,16 +23,20 @@ import cz.vut.sf.gui.LoggerClass;
  * then it solves SPP, action with the lowest expected
  * mean value will be chosen
  */
-public class Hop extends LoggerClass implements DefaultCtpAlgorithm {
+public class Hop extends DefaultCtpAlgorithm {
 	
+public Hop(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+
 private int totalRollouts = 100;
 // expandedHistory Set bias HOP to do more exploring by "remembering" previously visited vtxs
 // and setting its estimated cost for all other vertexes but chosen one. This is done till new blockage 
 // is explored, then Set is nulled.
 // TODO think if only last visit estimation should be used than all of the previous visits cost estimations
 private Set<ExpandedVtx> expandedHistory = new HashSet<ExpandedVtx>(); 
-
-	public Result solve(DefaultCtp ctp, Agent agent) {
+	@Override
+	public Result solve() {
 		LOG.info("Starting HOP, total rollouts = " + totalRollouts);
 		Vertex chosenVtx = null;
 		int blockedEdgesRevealed = 0;

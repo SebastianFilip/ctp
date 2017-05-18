@@ -1,104 +1,41 @@
 package cz.vut.sf.algorithms;
 
-
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
-import cz.vut.sf.graph.CtpException;
-import cz.vut.sf.graph.StochasticWeightedEdge;
-import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public class Uctb extends AbstractUctAlgorithm{
-	@Override
-	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTB, total rollouts = " + numberOfRollouts);
-		Result result = super.solve(ctp, agent);
-		result.msg = "UCTB";
-		return result;
+public class Uctb extends AbstractUctDepthAlgorithm{
+
+	public Uctb(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
 	}
 
 	@Override
-	public TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> node) {
-		if(node.isLeafNode()){
-			throw new CtpException("pickNode method called with leaf node: "+ node.toString() +". Expand node first.");
-		}
-		double maxUctValue = -1*Double.MAX_VALUE;
-		int maxValueIndex = -1;
-		for(int i = 0; i < node.getChildren().size();i++){
-			TreeNode<VtxDTO> child = node.getChildren().get(i);
-			double uctValue = evaluateUctFormula(child);
-			if(uctValue == Double.MAX_VALUE){
-				return child;
-			}else if(uctValue > maxUctValue){
-				maxValueIndex = i;
-				maxUctValue = uctValue;
-			}
-		}
-		if(maxValueIndex == -1){
-			maxValueIndex = 0;
-		}
-		return node.getChildren().get(maxValueIndex);
+	public Result solve() {
+		LOG.info("Starting UCTB new, total rollouts = " + numberOfIterations );
+		Result result = super.solve();
+		result.resultName = "UCTB new";
+		return result;
 	}
 	
-	protected double evaluateUctFormula(TreeNode<VtxDTO> child) {
-		if(child.getData().visitsMade == 0){
-			return Double.MAX_VALUE;
-		}
+	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,
+			int additionalSimulation) {
+		return false;
+	}
+
+	@Override
+	protected double evaluateUctFormula(TreeNode<VtxDTO> node) {
 		double result = 0;
-		double bias = child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade;
-		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
-		result -= child.getData().totalExpectedCost/child.getData().visitsMade;
-		result += bias*Math.sqrt(Math.log10(child.getParent().getData().visitsMade)/child.getData().visitsMade);
+		double totalExpectedCost = node.getData().totalExpectedCost;
+		double totalVisits = node.getData().visitsMade;
+		double bias = (node.getParent().getData().totalExpectedCost / node.getParent().getData().visitsMade);
+		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(node.getParent().getData().vtx, node.getData().vtx));
+		result -= totalExpectedCost/totalVisits;
+		result += bias*Math.sqrt(Math.log(node.getParent().getData().visitsMade)/(node.getData().visitsMade));
 		return result;
 	}
-	
-	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation) {
-		int currentRollout = 0;
-		do{
-			currentRollout ++;
-			StochasticWeightedGraph rolloutedGraph = this.getGraph().doRollout();
-			// I want my simulate agent to be always in same position and 
-			// I am using him only for creating traveling agent
-			Agent travellingAgent = new Agent(simulator.agent);
-			travellingAgent.senseAction(rolloutedGraph);
-			StochasticWeightedEdge edgeFromParentToChild = rolloutedGraph.getEdge(travellingAgent.getCurrentVertex(), vtxWhichIsExplored);
-			if(edgeFromParentToChild==null){
-				//edge is blocked go there by GA
-				//mby later it will be needed to check if graph is connected
-				if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, vtxWhichIsExplored, travellingAgent)){
-					//there is no path from current travellingAgent position to vertex which is about to be explored
-					continue;
-				}
-			}else{
-				travellingAgent.traverseToAdjancetVtx(rolloutedGraph, vtxWhichIsExplored);
-			}
-			travellingAgent.senseAction(rolloutedGraph);
-			if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, rolloutedGraph.getTerminalVtx(), travellingAgent)){
-				continue;
-			}
-			simulator.totalCost += travellingAgent.getTotalCost();
-			simulator.totalIterations ++;
-		}while(currentRollout < additionalSimulation);
-		boolean result = simulator.totalIterations == 0 ? false:true;
-		return result;		
-	}
-	
-	public int getNumberOfAdditionalRollouts() {
-		return numberOfAdditionalRollouts;
-	}
 
-	public int getNumberOfRollouts() {
-		return numberOfRollouts;
-	}
-
-	public void setNumberOfAdditionalRollouts(int n) {
-		this.numberOfAdditionalRollouts = n;
-	}
-
-	public void setNumberOfRollouts(int i) {
-		this.numberOfRollouts = i;
-	}
 }

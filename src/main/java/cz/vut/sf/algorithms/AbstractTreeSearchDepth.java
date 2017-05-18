@@ -1,23 +1,28 @@
-package cz.vut.sf.ctp;
+package cz.vut.sf.algorithms;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 
-import javax.swing.plaf.basic.BasicTreeUI.TreeHomeAction;
 
-import cz.vut.sf.algorithms.GreedyAlgorithm;
+
+
+
+import cz.vut.sf.ctp.Agent;
+import cz.vut.sf.ctp.DefaultCtp;
+import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
-import cz.vut.sf.gui.LoggerClass;
 
-public abstract class AbstractMonteCarloTreeSearchNew extends LoggerClass {
+public abstract class AbstractTreeSearchDepth extends DefaultCtpAlgorithm {
+	public AbstractTreeSearchDepth(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+
 	protected StochasticWeightedGraph graph;
 	protected TreeNode<VtxDTO> root;
-	private double penalizationPercent = 105;
+	private double penalizationPercent = 100;
 	Set<Vertex> pathToRoot= null;
 
 	public StochasticWeightedGraph getGraph() {
@@ -45,10 +50,22 @@ public abstract class AbstractMonteCarloTreeSearchNew extends LoggerClass {
 	 */
 	public abstract TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> parent, Set<Vertex> forbiddenSet);
 	
-	public void doSearch(final int numberOfRollouts){
+	public int doSearch(final int numberOfRollouts){
+		return doSearch(numberOfRollouts, 120000);
+	}
+	
+	public int doSearch(final int numberOfRollouts, final long timeToDecision){
+		int iterationsMade = 0;
+		long startingTime = (long) (System.nanoTime()/1E6);
 		int k = 0;
 		//better expand children in algorithm, not all if blockage is not discovered
 		while(k < numberOfRollouts){
+			iterationsMade++;
+			long timeMakingDecision = (long) (System.nanoTime()/1E6) - startingTime;
+			if(timeMakingDecision > timeToDecision){
+				return iterationsMade;
+			}
+			
 			if(root.getChildren().isEmpty()){
 				expandNode(root, null);
 			}
@@ -59,43 +76,12 @@ public abstract class AbstractMonteCarloTreeSearchNew extends LoggerClass {
 			StochasticWeightedGraph rolloutedGraph = graph.doRollout();
 			StochasticWeightedGraph rolloutedGraphWithoutBlockedEdges = (StochasticWeightedGraph) rolloutedGraph.clone();
 			rolloutedGraphWithoutBlockedEdges.removeAllBlockedEdges();
-			boolean treeHasAvailableChildren = true;
-			boolean innerCycle = false;
-			while(!checkTerminalNode(currentNode) && treeHasAvailableChildren && !innerCycle){
-				if(currentNode.isLeafNode()){
-					expandNode(currentNode, currentNode.getParent().getData().vtx);
-					if(currentNode.getChildren().isEmpty()){
-						//dead end take GA from there
-						break;
-					}
-				}
-				Set<Vertex> forbiddenNodes = new HashSet<Vertex>();
-				final TreeNode<VtxDTO> currentsParent = currentNode;
-				// checks if edge is in rolloutedGraph if not pick other¨
-				boolean isEdgeInRolloutedGraph = true;
-				do{
-					currentNode = pickNode(currentNode, forbiddenNodes);
-					isEdgeInRolloutedGraph = rolloutedGraphWithoutBlockedEdges.getEdge(currentsParent.getData().vtx, currentNode.getData().vtx) != null;
-					if(!isEdgeInRolloutedGraph){
-						forbiddenNodes.add(currentNode.getData().vtx);
-						currentNode = currentsParent;
-						if(forbiddenNodes.size() == currentNode.getChildren().size()){
-							treeHasAvailableChildren = false;
-						}
-					}else{
-
-					}
-					if(!treeHasAvailableChildren){
-						break;
-					}
-				}while(!(isEdgeInRolloutedGraph));
-				
-				if(!pathToRoot.add(currentNode.getData().vtx)){
-					if(LOG.isDebugEnabled()){
-						LOG.debug("Adding to sequence vtx:" + currentNode.getData().vtx 
-								+ ", is already on path to root! Rest of path will be determined by GA");
-					}
-					innerCycle = true;
+			boolean continueCondition = true;
+			while(!checkTerminalNode(currentNode) && continueCondition){
+				TreeNode<VtxDTO> previousNode = currentNode;
+				currentNode = addOneChild(currentNode, rolloutedGraphWithoutBlockedEdges);
+				if(previousNode.equals(currentNode)){
+					continueCondition = false;
 				}
 			}
 			final TreeNode<VtxDTO> chosenTerminalNode = currentNode;
@@ -113,32 +99,69 @@ public abstract class AbstractMonteCarloTreeSearchNew extends LoggerClass {
 				simAgent.traverseToAdjancetVtx(rolloutedGraph, destination);
 			}while(!moveToBeMade.isEmpty());
 			
-			if(!treeHasAvailableChildren){
-				LOG.debug("Dead end was encountred, finishing travelsal by GA from: " + simAgent.getCurrentVertex());
+			if(!simAgent.getCurrentVertex().equals(graph.getTerminalVtx())){
 				simAgent.senseAction(rolloutedGraph);
-				//it takes SPP since rollouted graph has removed blocked edges
 				if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, rolloutedGraph.getTerminalVtx(), simAgent)){
 					LOG.debug("Rollouted graph did not have connected " + simAgent.getCurrentVertex() 
-							+ ", with termination vtx ... skiping rollout");
-					continue;
+						+ ", with termination vtx ... skiping rollout");
+				continue;
 				}
-				panalizationNeeded = true;
-			}else if(innerCycle){
-				LOG.debug("Inner cycle was encountred, finishing travelsal by GA from: " + simAgent.getCurrentVertex());
-				simAgent.senseAction(rolloutedGraph);
-				//it takes SPP since rollouted graph has removed blocked edges
-				if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, rolloutedGraph.getTerminalVtx(), simAgent)){
-					LOG.debug("Rollouted graph did not have connected " + simAgent.getCurrentVertex() 
-							+ ", with termination vtx ... skiping rollout");
-					continue;
-				}
-				panalizationNeeded = true;
 			}
-			
+
 			logChosenPath(chosenTerminalNode, simAgent, panalizationNeeded);
 			backPropagation(chosenTerminalNode, simAgent, panalizationNeeded);
 			k++;
 		}
+		return iterationsMade;
+	}
+
+	private TreeNode<VtxDTO> addOneChild(TreeNode<VtxDTO> currentNode,
+			StochasticWeightedGraph rolloutedGraphWithoutBlockedEdges) {
+		
+		if(currentNode.isLeafNode()){
+			expandNode(currentNode, currentNode.getParent().getData().vtx);
+		}
+		Set<Vertex> forbiddenNodes = new HashSet<Vertex>();
+		forbiddenNodes.addAll(getBlockedEdgesTerminals(rolloutedGraphWithoutBlockedEdges ,currentNode.getData().vtx));
+		
+		if(currentNode.getChildren().isEmpty()){
+			//dead end return parent
+			LOG.debug("Dead end, returning parent");
+			return currentNode.getParent();
+		}else if(forbiddenNodes.size() == currentNode.getChildren().size()){
+			//all nodes are forbidden return itself
+			LOG.debug("No more option to add to sequence, finish by GA");
+			return currentNode;
+		}else{
+			do{
+				TreeNode<VtxDTO> previousCurrent = currentNode;
+				currentNode = pickNode(currentNode, forbiddenNodes);
+				if(pathToRoot.add(currentNode.getData().vtx)){
+					return currentNode;
+				}else{
+					// chosen vtx was already on path from root
+					forbiddenNodes.add(currentNode.getData().vtx);
+					currentNode = previousCurrent;
+					if(forbiddenNodes.size() == currentNode.getChildren().size()){
+						if(LOG.isDebugEnabled()){
+							LOG.debug("No more option to add to sequence, finish by GA");
+						}
+						return currentNode;
+					}
+				}
+			}while(true);
+		}
+	}
+
+	private Set<Vertex> getBlockedEdgesTerminals(StochasticWeightedGraph rolloutedGraph, Vertex source) {
+		Set<Vertex> result = new HashSet<Vertex>();
+		Set<Vertex> neighbours = StochasticWeightedGraph.getAdjacentVertexes(source, graph);
+		for(Vertex vtx:neighbours){
+			if(rolloutedGraph.getEdge(source, vtx)==null){
+				result.add(vtx);
+			}
+		}
+		return result;
 	}
 
 	private void logChosenPath(TreeNode<VtxDTO> fromNode, Agent simAgent, boolean penalizationOn) {

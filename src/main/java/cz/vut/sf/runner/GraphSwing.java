@@ -20,6 +20,7 @@ import com.mxgraph.util.mxConstants;
 import com.mxgraph.view.mxGraph;
 import com.mxgraph.view.mxStylesheet;
 
+import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedEdge.State;
 import cz.vut.sf.graph.StochasticWeightedGraph;
@@ -97,7 +98,8 @@ public class GraphSwing extends JFrame{
 		}
 	}
 	
-	private void displayGraph(StochasticWeightedGraph gSource, mxGraph g, List<Point> pointList){
+	private void displayGraph(StochasticWeightedGraph gSource, mxGraph g,final List<Point> pointList){
+		List<Point> multiplyedPointList = multiplyPointList(pointList, 100);
 		int x = 50; int y = 50;
 		final int HEIGHT = 40; final int WIDTH = 40;
 		Object parent = g.getDefaultParent();
@@ -114,23 +116,23 @@ public class GraphSwing extends JFrame{
 			Point movement = new Point(0,0);
 			double[] scalingConstant = {1,1};
 			for (int i = 0; i < v.length;i++){
-				if(pointList != null && !pointList.isEmpty()){
+				if(multiplyedPointList != null && !multiplyedPointList.isEmpty()){
 					//if NODE_COORD_SECTION is present
 					
 					if(isMovingAllowed){
-						movement = getMovement(pointList);
-						applyMovement(pointList, movement);
+						movement = getMovement(multiplyedPointList);
+						applyMovement(multiplyedPointList, movement);
 						//want this to be calculated only once
 						isMovingAllowed = false;
 					}
 					
 					if(isScalingAllowed){
-						scalingConstant = getScaling(pointList);
+						scalingConstant = getScaling(multiplyedPointList);
 						//want this to be calculated only once
 						isScalingAllowed = false;
 					}
-					x = (int) (scalingConstant[0] * (pointList.get(i).x)); 
-					y = (int) (scalingConstant[1] * (pointList.get(i).y)); 
+					x = (int) (scalingConstant[0] * (multiplyedPointList.get(i).x)); 
+					y = (int) (scalingConstant[1] * (multiplyedPointList.get(i).y)); 
 				}
 				Vertex vtx = gSource.getVtxById(i+1);
 				v[i] = g.insertVertex(parent, vtx.toString(), vtx.toString(), x%screenX, y%screenY,
@@ -148,6 +150,17 @@ public class GraphSwing extends JFrame{
 		}
 		setEdgeStyle(g);
 		g.refresh();
+	}
+
+	private List<Point> multiplyPointList(List<Point> pointList, int k) {
+		if(pointList == null || pointList.isEmpty()){
+			return pointList;
+		}
+		List<Point> result = new ArrayList<Point>();
+		for (Point point : pointList) {
+			result.add(new Point(point.x * k, point.y * k));
+		}
+		return result;
 	}
 
 	private void applyMovement(List<Point> pointList,Point movement) {
@@ -212,7 +225,6 @@ public class GraphSwing extends JFrame{
 		clone.removeAllBlockedEdges();
 		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(clone);
     	GraphPath<Vertex, StochasticWeightedEdge> shortestPath = dsp.getPath(clone.getSourceVtx(), clone.getTerminalVtx());
-    	List<StochasticWeightedEdge> spEdgeList = shortestPath.getEdgeList();
 		int i = 0;
 		for (StochasticWeightedEdge edge : edgeSet){
 			Vertex source = gSource.getEdgeSource(edge);
@@ -223,6 +235,11 @@ public class GraphSwing extends JFrame{
 				blockedEdgesIndexes.add(i);
 				g.setCellStyles(mxConstants.STYLE_STROKECOLOR, "red", new Object[]{e[i]});
 			}
+			
+			if(shortestPath == null){
+				throw new CtpException("Generated instance was not connected from start vtx to termination vtx");
+			}
+			List<StochasticWeightedEdge> spEdgeList = shortestPath.getEdgeList();
 			for(StochasticWeightedEdge spEdge : spEdgeList){
 				if(gSource.getEdgeSource(spEdge).equals(source) && gSource.getEdgeTarget(spEdge).equals(target) ||
 						gSource.getEdgeSource(spEdge).equals(target) && gSource.getEdgeTarget(spEdge).equals(source)){

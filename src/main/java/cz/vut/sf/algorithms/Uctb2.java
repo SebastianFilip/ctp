@@ -1,66 +1,65 @@
 package cz.vut.sf.algorithms;
 
 
-import org.jgrapht.GraphPath;
-import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
-
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.ctp.Simulator;
+import cz.vut.sf.ctp.VtxDTO;
 import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
+import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public class Uctb2 extends Uctb {
-	
+public class Uctb2 extends AbstractUctWidthAlgorithm{
+	public Uctb2(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+
 	@Override
-	public Result solve(DefaultCtp ctp, Agent agent) {
-		LOG.info("Starting UCTB2, total rollouts = " +numberOfRollouts);
-		int blockedEdgesRevealed = 0;
-		
-		while(agent.getCurrentVertex()!=ctp.t){
-			//If graph changes all of the children of current vertex should be expanded (explored)
-			boolean isGraphChanged = false;
-			agent.senseAction(ctp.g);
-			
-			if(blockedEdgesRevealed != ctp.g.getBlockedEdgesRevealed()){
-				blockedEdgesRevealed = ctp.g.getBlockedEdgesRevealed();
-				isGraphChanged = true;
-			}
-			
-			this.setRoot(agent.getCurrentVertex());
-			this.setGraph(ctp.g);
-			if(this.getRoot().isLeafNode()){
-				LOG.debug("Expanding root = "+ this.getRoot().getData().vtx +", except for parent = " + agent.getPreviousVertex(isGraphChanged));
-				this.expandNode(this.getRoot(), agent.getPreviousVertex(isGraphChanged));
-			}
-			
-			if(this.getRoot().getChildren().isEmpty()){
-				//this means that algorithm choose to travel to vtx about which knew that is dead end
-				LOG.error("This should never happen!! Chosen vtx(dead end) = " + agent.getPreviousVertex(true));
-				throw new CtpException("Uct choose to go to dead end vtx");
-			}
-			if(this.getRoot().getChildren().size() == 1){
-				//there is only one possible child -> go through it
-				LOG.debug("Chosen vtx(only child) = " + this.getRoot().getChildren().get(0).getData().vtx);
-				agent.traverseToAdjancetVtx(ctp.g, this.getRoot().getChildren().get(0).getData().vtx);
-				continue;
-				}
-			
-			this.doSearch(numberOfRollouts, numberOfAdditionalRollouts);
-			Vertex chosenVtx = this.getBestAction();
-			LOG.debug("Chosen vtx = " + chosenVtx);
-			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
-			
+	public Result solve() {
+		LOG.info("Starting UCTB2, total iterations = " + numberOfIterations);
+		Result result = super.solve();
+		result.resultName = "UCTB2";
+		return result;
+	}
+
+	@Override
+	public TreeNode<VtxDTO> pickNode(TreeNode<VtxDTO> node) {
+		if(node.isLeafNode()){
+			throw new CtpException("pickNode method called with leaf node: "+ node.toString() +". Expand node first.");
 		}
-		return new Result(agent, "UCTB2");
+		double maxUctValue = -1*Double.MAX_VALUE;
+		int maxValueIndex = -1;
+		for(int i = 0; i < node.getChildren().size();i++){
+			TreeNode<VtxDTO> child = node.getChildren().get(i);
+			double uctValue = evaluateUctFormula(child);
+			if(uctValue == Double.MAX_VALUE){
+				return child;
+			}else if(uctValue > maxUctValue){
+				maxValueIndex = i;
+				maxUctValue = uctValue;
+			}
+		}
+		if(maxValueIndex == -1){
+			maxValueIndex = 0;
+		}
+		return node.getChildren().get(maxValueIndex);
 	}
 	
-	@Override
+	protected double evaluateUctFormula(TreeNode<VtxDTO> child) {
+		if(child.getData().visitsMade == 0){
+			return Double.MAX_VALUE;
+		}
+		double result = 0;
+		double bias = child.getParent().getData().totalExpectedCost / child.getParent().getData().visitsMade;
+		result -= this.getGraph().getEdgeWeight(this.getGraph().getEdge(child.getParent().getData().vtx, child.getData().vtx));
+		result -= child.getData().totalExpectedCost/child.getData().visitsMade;
+		result += bias*Math.sqrt(Math.log10(child.getParent().getData().visitsMade)/child.getData().visitsMade);
+		return result;
+	}
+	
 	public boolean doSimulation(Simulator simulator, Vertex vtxWhichIsExplored,int additionalSimulation) {
-		DijkstraShortestPath<Vertex, StochasticWeightedEdge> dsp;
-		GraphPath<Vertex, StochasticWeightedEdge> shortestPath;
 		int currentRollout = 0;
 		do{
 			currentRollout ++;
@@ -80,18 +79,14 @@ public class Uctb2 extends Uctb {
 			}else{
 				travellingAgent.traverseToAdjancetVtx(rolloutedGraph, vtxWhichIsExplored);
 			}
-			//finish route by Dijkstra
-			rolloutedGraph.removeAllBlockedEdges();
-			dsp = new DijkstraShortestPath<Vertex, StochasticWeightedEdge>(rolloutedGraph);
-			shortestPath = dsp.getPath(travellingAgent.getCurrentVertex(), rolloutedGraph.getTerminalVtx());
-			if(shortestPath == null){
-				LOG.debug("In rollouted graph there were no path to terminal vtx. Skipping rollout...");
+			travellingAgent.senseAction(rolloutedGraph);
+			if(!GreedyAlgorithm.traverseByGa(rolloutedGraph, rolloutedGraph.getTerminalVtx(), travellingAgent)){
 				continue;
 			}
-			simulator.totalCost += travellingAgent.getTotalCost() + shortestPath.getWeight();
+			simulator.totalCost += travellingAgent.getTotalCost();
 			simulator.totalIterations ++;
 		}while(currentRollout < additionalSimulation);
 		boolean result = simulator.totalIterations == 0 ? false:true;
-		return result;	
+		return result;		
 	}
 }

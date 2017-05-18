@@ -139,7 +139,7 @@ public class StochasticWeightedGraph extends
 	 * according to its probabilities. The check that connection exists between 
 	 * source and target vtx is made. Re-evaluated are only edges with belief state unknown.
 	 * 
-	 * @ new connected Instance of graph that calls it
+	 * @return new connected Instance of graph that calls it
 	 */
 	public StochasticWeightedGraph doRollout() {
 		return doRollout(0);

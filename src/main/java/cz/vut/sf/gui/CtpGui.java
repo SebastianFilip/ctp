@@ -19,7 +19,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 
-import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedEdge;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.parsers.BasicCtpParser;
@@ -66,17 +65,18 @@ public class CtpGui extends CtpAppConstants{
 	public static JRadioButton rdbtnCA;
 	public static JRadioButton rdbtnHOP;
 	public static JRadioButton rdbtnORO;
-	public static JRadioButton rdbtnUCTB;
+	public static JRadioButton rdbtnUCTO2;
 	public static JRadioButton rdbtnUCTO;
 	public static JRadioButton rdbtnUCTP;
 	public static JLabel lblStatus;
 	private JTextField textFieldHOP;
 	private JTextField textFieldORO;
-	private JTextField textFieldUCTB;
+	private JTextField textFieldUCTO2;
 	private JTextField textFieldUCTO;
 	private JTextField textFieldUCTP;
 	private JTextField textFieldUCTO_M;
-	private JTextField textFieldUCTP_M;
+	private JTextField textFieldUCTP_Nr;
+	private JTextField textField_UCTO2_Nr;
 	private JTextArea textAreaConsole;
 	private JScrollPane scrollConsole;
 	private JScrollPane scrollTable;
@@ -88,6 +88,8 @@ public class CtpGui extends CtpAppConstants{
 	private JPanel panelAlgorithms;
 	private JPanel panelResults;
 	private JPanel panelSettings;
+	private JTextField txtFieldTimeToUctDecision;
+
 
 
 	/**
@@ -188,8 +190,8 @@ public class CtpGui extends CtpAppConstants{
 		if(rdbtnCA.isSelected()){result.add(AlgNames.CA);}
 		if(rdbtnHOP.isSelected()){result.add(AlgNames.HOP);}
 		if(rdbtnORO.isSelected()){result.add(AlgNames.ORO);}
-		if(rdbtnUCTB.isSelected()){result.add(AlgNames.UCTB);}
 		if(rdbtnUCTO.isSelected()){result.add(AlgNames.UCTO);}
+		if(rdbtnUCTO2.isSelected()){result.add(AlgNames.UCTO2);}
 		if(rdbtnUCTP.isSelected()){result.add(AlgNames.UCTP);}
 		return result;
 	}
@@ -219,13 +221,14 @@ public class CtpGui extends CtpAppConstants{
 	private void initSettingsPanel() {
 		ButtonGroup bgLogLevel = new ButtonGroup(); 
 		ButtonGroup bgDefaultXlsName = new ButtonGroup(); 
+		ButtonGroup bgTimeForUct = new ButtonGroup(); 
 		panelSettings = new JPanel();
 		tabbedPane.addTab("App Settings", null, panelSettings, null);
 		GridBagLayout gbl_panelSettings = new GridBagLayout();
-		gbl_panelSettings.columnWidths = new int[]{5, 124, 74, 86, 349, 0};
-		gbl_panelSettings.rowHeights = new int[]{32, 27, 27, 27, 27, 27, 27, 27, 0, 0};
+		gbl_panelSettings.columnWidths = new int[]{5, 124, 74, 86, 181, 0};
+		gbl_panelSettings.rowHeights = new int[]{32, 27, 27, 27, 0, 27, 27, 27, 27, 0, 0};
 		gbl_panelSettings.columnWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
-		gbl_panelSettings.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
+		gbl_panelSettings.rowWeights = new double[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE};
 		panelSettings.setLayout(gbl_panelSettings);
 		
 		JLabel lblCommonSettings = new JLabel("Common settings");
@@ -242,7 +245,7 @@ public class CtpGui extends CtpAppConstants{
 		JLabel lblDefaultGraphSource = new JLabel("Default graph source folder:");
 		lblDefaultGraphSource.setVerticalAlignment(SwingConstants.TOP);
 		GridBagConstraints gbc_lblDefaultGraphSource = new GridBagConstraints();
-		gbc_lblDefaultGraphSource.anchor = GridBagConstraints.EAST;
+		gbc_lblDefaultGraphSource.anchor = GridBagConstraints.WEST;
 		gbc_lblDefaultGraphSource.insets = new Insets(0, 0, 5, 5);
 		gbc_lblDefaultGraphSource.gridx = 1;
 		gbc_lblDefaultGraphSource.gridy = 1;
@@ -266,7 +269,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_txtDefaultSourceFolder.fill = GridBagConstraints.BOTH;
 		gbc_txtDefaultSourceFolder.anchor = GridBagConstraints.WEST;
 		gbc_txtDefaultSourceFolder.gridwidth = 3;
-		gbc_txtDefaultSourceFolder.insets = new Insets(0, 0, 5, 5);
+		gbc_txtDefaultSourceFolder.insets = new Insets(0, 0, 5, 0);
 		gbc_txtDefaultSourceFolder.gridx = 2;
 		gbc_txtDefaultSourceFolder.gridy = 1;
 		panelSettings.add(txtDefaultSourceFolder, gbc_txtDefaultSourceFolder);
@@ -297,7 +300,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_txtDefaultExportFolder.fill = GridBagConstraints.BOTH;
 		gbc_txtDefaultExportFolder.anchor = GridBagConstraints.WEST;
 		gbc_txtDefaultExportFolder.gridwidth = 3;
-		gbc_txtDefaultExportFolder.insets = new Insets(0, 0, 5, 5);
+		gbc_txtDefaultExportFolder.insets = new Insets(0, 0, 5, 0);
 		gbc_txtDefaultExportFolder.gridx = 2;
 		gbc_txtDefaultExportFolder.gridy = 2;
 		panelSettings.add(txtDefaultExportFolder, gbc_txtDefaultExportFolder);
@@ -353,13 +356,85 @@ public class CtpGui extends CtpAppConstants{
 		if(prop.getProperty(PropKeys.DEFAULT_XLS_NAME_ON.name()).contains("0")){
 			rdbtnNo.setSelected(true);
 		}
+		String timeToDecisionValue = prop.getProperty(PropKeys.TIME_TO_DECISION_FOR_UCT.name());
+		final JLabel lblUctTimeToDecision = new JLabel("UCT time to decision (" + timeToDecisionValue + " ms)");
+		lblUctTimeToDecision.setToolTipText("value of default time can be changed in config.properties setting TIME_TO_DECISION_FOR_UCT in [ms]");
+		lblUctTimeToDecision.setHorizontalAlignment(SwingConstants.LEFT);
+		GridBagConstraints gbc_lblUctTimeToDecision = new GridBagConstraints();
+		gbc_lblUctTimeToDecision.anchor = GridBagConstraints.WEST;
+		gbc_lblUctTimeToDecision.insets = new Insets(0, 0, 5, 5);
+		gbc_lblUctTimeToDecision.gridx = 1;
+		gbc_lblUctTimeToDecision.gridy = 4;
+		panelSettings.add(lblUctTimeToDecision, gbc_lblUctTimeToDecision);
+		
+		JRadioButton rdbtnOn = new JRadioButton("On", true);
+		rdbtnOn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				prop.setProperty(PropKeys.TIME_LIMITATION_ON.name(), "True");
+				try {
+					saveProp();
+				} catch (Throwable e1) {
+					LOG.error(e1);
+					e1.printStackTrace();
+				}
+			}
+		});
+		rdbtnOn.setSelected(Boolean.parseBoolean(prop.getProperty(PropKeys.TIME_LIMITATION_ON.name())));
+		GridBagConstraints gbc_rdbtnOn = new GridBagConstraints();
+		gbc_rdbtnOn.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnOn.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnOn.gridx = 2;
+		gbc_rdbtnOn.gridy = 4;
+		bgTimeForUct.add(rdbtnOn);
+		panelSettings.add(rdbtnOn, gbc_rdbtnOn);
+		
+		JRadioButton rdbtnOff = new JRadioButton("Off", false);
+		rdbtnOff.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				prop.setProperty(PropKeys.TIME_LIMITATION_ON.name(), "False");
+				try {
+					saveProp();
+				} catch (Throwable e1) {
+					LOG.error(e1);
+					e1.printStackTrace();
+				}
+			}
+		});
+		rdbtnOff.setSelected(!Boolean.parseBoolean(prop.getProperty(PropKeys.TIME_LIMITATION_ON.name())));
+		GridBagConstraints gbc_rdbtnOff = new GridBagConstraints();
+		gbc_rdbtnOff.anchor = GridBagConstraints.WEST;
+		gbc_rdbtnOff.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnOff.gridx = 3;
+		gbc_rdbtnOff.gridy = 4;
+		bgTimeForUct.add(rdbtnOff);
+		panelSettings.add(rdbtnOff, gbc_rdbtnOff);
+		
+		txtFieldTimeToUctDecision = new JTextField();
+		txtFieldTimeToUctDecision.setText(prop.getProperty(PropKeys.TIME_TO_DECISION_FOR_UCT.name()));
+		txtFieldTimeToUctDecision.setToolTipText("Enter positive integer (time in miliseconds)");
+		txtFieldTimeToUctDecision.addActionListener(new TextFieldIntegerListener(PropKeys.TIME_TO_DECISION_FOR_UCT, txtFieldTimeToUctDecision){
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				super.actionPerformed(e);
+				String timeToDecisionValue = prop.getProperty(PropKeys.TIME_TO_DECISION_FOR_UCT.name());
+				lblUctTimeToDecision.setText("UCT time to decision (" + timeToDecisionValue + " ms)");
+			}
+		});
+		txtFieldTimeToUctDecision.setText((String) null);
+		txtFieldTimeToUctDecision.setColumns(10);
+		GridBagConstraints gbc_txtFieldTimeToUctDecision = new GridBagConstraints();
+		gbc_txtFieldTimeToUctDecision.insets = new Insets(0, 0, 5, 0);
+		gbc_txtFieldTimeToUctDecision.fill = GridBagConstraints.BOTH;
+		gbc_txtFieldTimeToUctDecision.gridx = 4;
+		gbc_txtFieldTimeToUctDecision.gridy = 4;
+		panelSettings.add(txtFieldTimeToUctDecision, gbc_txtFieldTimeToUctDecision);
 		
 		JLabel lblLogLevel = new JLabel("Log level");
 		GridBagConstraints gbc_lblLogLevel = new GridBagConstraints();
 		gbc_lblLogLevel.anchor = GridBagConstraints.WEST;
 		gbc_lblLogLevel.insets = new Insets(0, 0, 5, 5);
 		gbc_lblLogLevel.gridx = 1;
-		gbc_lblLogLevel.gridy = 4;
+		gbc_lblLogLevel.gridy = 5;
 		panelSettings.add(lblLogLevel, gbc_lblLogLevel);
 		
 		rdbtnInfo = new JRadioButton("Info",true);
@@ -368,7 +443,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_rdbtnInfo.anchor = GridBagConstraints.WEST;
 		gbc_rdbtnInfo.insets = new Insets(0, 0, 5, 5);
 		gbc_rdbtnInfo.gridx = 2;
-		gbc_rdbtnInfo.gridy = 4;
+		gbc_rdbtnInfo.gridy = 5;
 		panelSettings.add(rdbtnInfo, gbc_rdbtnInfo);
 		JRadioButton rdbtnDebug = new JRadioButton("Debug", false);
 		bgLogLevel.add(rdbtnDebug);
@@ -376,7 +451,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_rdbtnDebug.insets = new Insets(0, 0, 5, 5);
 		gbc_rdbtnDebug.anchor = GridBagConstraints.WEST;
 		gbc_rdbtnDebug.gridx = 3;
-		gbc_rdbtnDebug.gridy = 4;
+		gbc_rdbtnDebug.gridy = 5;
 		panelSettings.add(rdbtnDebug, gbc_rdbtnDebug);
 		
 		JLabel lblVisualiserSettings = new JLabel("Visualiser settings");
@@ -387,7 +462,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_lblVisualiserSettings.anchor = GridBagConstraints.WEST;
 		gbc_lblVisualiserSettings.insets = new Insets(0, 0, 5, 5);
 		gbc_lblVisualiserSettings.gridx = 1;
-		gbc_lblVisualiserSettings.gridy = 5;
+		gbc_lblVisualiserSettings.gridy = 6;
 		panelSettings.add(lblVisualiserSettings, gbc_lblVisualiserSettings);
 		
 		JLabel lblVisualiserWidth = new JLabel("Visualiser width:");
@@ -395,7 +470,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_lblVisualiserWidth.anchor = GridBagConstraints.WEST;
 		gbc_lblVisualiserWidth.insets = new Insets(0, 0, 5, 5);
 		gbc_lblVisualiserWidth.gridx = 1;
-		gbc_lblVisualiserWidth.gridy = 6;
+		gbc_lblVisualiserWidth.gridy = 7;
 		panelSettings.add(lblVisualiserWidth, gbc_lblVisualiserWidth);
 		
 		txtVisualiserWidth = new JTextField();
@@ -407,7 +482,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_txtVisualiserWidth.anchor = GridBagConstraints.NORTHWEST;
 		gbc_txtVisualiserWidth.insets = new Insets(0, 0, 5, 5);
 		gbc_txtVisualiserWidth.gridx = 2;
-		gbc_txtVisualiserWidth.gridy = 6;
+		gbc_txtVisualiserWidth.gridy = 7;
 		panelSettings.add(txtVisualiserWidth, gbc_txtVisualiserWidth);
 		
 		JLabel lblVisualiserHeight = new JLabel("Visualiser height:");
@@ -415,7 +490,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_lblVisualiserHeight.anchor = GridBagConstraints.WEST;
 		gbc_lblVisualiserHeight.insets = new Insets(0, 0, 5, 5);
 		gbc_lblVisualiserHeight.gridx = 1;
-		gbc_lblVisualiserHeight.gridy = 7;
+		gbc_lblVisualiserHeight.gridy = 8;
 		panelSettings.add(lblVisualiserHeight, gbc_lblVisualiserHeight);
 		
 		txtVisualiserHeight = new JTextField();
@@ -427,7 +502,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_txtVisualiserHeight.anchor = GridBagConstraints.NORTHWEST;
 		gbc_txtVisualiserHeight.insets = new Insets(0, 0, 5, 5);
 		gbc_txtVisualiserHeight.gridx = 2;
-		gbc_txtVisualiserHeight.gridy = 7;
+		gbc_txtVisualiserHeight.gridy = 8;
 		panelSettings.add(txtVisualiserHeight, gbc_txtVisualiserHeight);
 	}
 	private void initResultsPanel() {
@@ -695,13 +770,13 @@ public class CtpGui extends CtpAppConstants{
 		gbc_label_20.gridy = 3;
 		panelAlgorithms.add(label_20, gbc_label_20);
 		
-		JLabel lblComparisionAlgorithm = new JLabel("   Comparision algorithm");
-		GridBagConstraints gbc_lblComparisionAlgorithm = new GridBagConstraints();
-		gbc_lblComparisionAlgorithm.fill = GridBagConstraints.BOTH;
-		gbc_lblComparisionAlgorithm.insets = new Insets(0, 0, 5, 5);
-		gbc_lblComparisionAlgorithm.gridx = 0;
-		gbc_lblComparisionAlgorithm.gridy = 4;
-		panelAlgorithms.add(lblComparisionAlgorithm, gbc_lblComparisionAlgorithm);
+		JLabel lblComparisonAlgorithm = new JLabel("   Comparison algorithm");
+		GridBagConstraints gbc_lblComparisonAlgorithm = new GridBagConstraints();
+		gbc_lblComparisonAlgorithm.fill = GridBagConstraints.BOTH;
+		gbc_lblComparisonAlgorithm.insets = new Insets(0, 0, 5, 5);
+		gbc_lblComparisonAlgorithm.gridx = 0;
+		gbc_lblComparisonAlgorithm.gridy = 4;
+		panelAlgorithms.add(lblComparisonAlgorithm, gbc_lblComparisonAlgorithm);
 		
 		rdbtnCA = new JRadioButton("");
 		GridBagConstraints gbc_rdbtnCA = new GridBagConstraints();
@@ -872,72 +947,12 @@ public class CtpGui extends CtpAppConstants{
 		gbc_label_40.gridy = 6;
 		panelAlgorithms.add(label_40, gbc_label_40);
 		
-		JLabel lblBlindUctuctb = new JLabel("   Blind UCT (UCTB)");
-		GridBagConstraints gbc_lblBlindUctuctb = new GridBagConstraints();
-		gbc_lblBlindUctuctb.fill = GridBagConstraints.BOTH;
-		gbc_lblBlindUctuctb.insets = new Insets(0, 0, 5, 5);
-		gbc_lblBlindUctuctb.gridx = 0;
-		gbc_lblBlindUctuctb.gridy = 7;
-		panelAlgorithms.add(lblBlindUctuctb, gbc_lblBlindUctuctb);
-		
-		rdbtnUCTB = new JRadioButton("");
-		GridBagConstraints gbc_rdbtnUCTB = new GridBagConstraints();
-		gbc_rdbtnUCTB.fill = GridBagConstraints.BOTH;
-		gbc_rdbtnUCTB.insets = new Insets(0, 0, 5, 5);
-		gbc_rdbtnUCTB.gridx = 1;
-		gbc_rdbtnUCTB.gridy = 7;
-		panelAlgorithms.add(rdbtnUCTB, gbc_rdbtnUCTB);
-		
-		JLabel lblRollouts2 = new JLabel("   Rollouts:");
-		GridBagConstraints gbc_lblRollouts2 = new GridBagConstraints();
-		gbc_lblRollouts2.fill = GridBagConstraints.BOTH;
-		gbc_lblRollouts2.insets = new Insets(0, 0, 5, 5);
-		gbc_lblRollouts2.gridx = 2;
-		gbc_lblRollouts2.gridy = 7;
-		panelAlgorithms.add(lblRollouts2, gbc_lblRollouts2);
-		
-		textFieldUCTB = new JTextField();
-		textFieldUCTB.setToolTipText("Pls enter positive integer value.");
-		textFieldUCTB.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTB, textFieldUCTB));
-		textFieldUCTB.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTB.name()));
-		textFieldUCTB.setColumns(10);
-		GridBagConstraints gbc_textFieldUCTB = new GridBagConstraints();
-		gbc_textFieldUCTB.fill = GridBagConstraints.BOTH;
-		gbc_textFieldUCTB.insets = new Insets(0, 0, 5, 5);
-		gbc_textFieldUCTB.gridx = 3;
-		gbc_textFieldUCTB.gridy = 7;
-		panelAlgorithms.add(textFieldUCTB, gbc_textFieldUCTB);
-		
-		JLabel label_44 = new JLabel("");
-		GridBagConstraints gbc_label_44 = new GridBagConstraints();
-		gbc_label_44.fill = GridBagConstraints.BOTH;
-		gbc_label_44.insets = new Insets(0, 0, 5, 5);
-		gbc_label_44.gridx = 4;
-		gbc_label_44.gridy = 7;
-		panelAlgorithms.add(label_44, gbc_label_44);
-		
-		JLabel label_45 = new JLabel("");
-		GridBagConstraints gbc_label_45 = new GridBagConstraints();
-		gbc_label_45.fill = GridBagConstraints.BOTH;
-		gbc_label_45.insets = new Insets(0, 0, 5, 5);
-		gbc_label_45.gridx = 5;
-		gbc_label_45.gridy = 7;
-		panelAlgorithms.add(label_45, gbc_label_45);
-		
-		JLabel label_46 = new JLabel("");
-		GridBagConstraints gbc_label_46 = new GridBagConstraints();
-		gbc_label_46.fill = GridBagConstraints.BOTH;
-		gbc_label_46.insets = new Insets(0, 0, 5, 0);
-		gbc_label_46.gridx = 6;
-		gbc_label_46.gridy = 7;
-		panelAlgorithms.add(label_46, gbc_label_46);
-		
 		JLabel lblOptimisticUctucto = new JLabel("   Optimistic UCT (UCTO)");
 		GridBagConstraints gbc_lblOptimisticUctucto = new GridBagConstraints();
 		gbc_lblOptimisticUctucto.fill = GridBagConstraints.BOTH;
 		gbc_lblOptimisticUctucto.insets = new Insets(0, 0, 5, 5);
 		gbc_lblOptimisticUctucto.gridx = 0;
-		gbc_lblOptimisticUctucto.gridy = 8;
+		gbc_lblOptimisticUctucto.gridy = 7;
 		panelAlgorithms.add(lblOptimisticUctucto, gbc_lblOptimisticUctucto);
 		
 		rdbtnUCTO = new JRadioButton("");
@@ -945,7 +960,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_rdbtnUCTO.fill = GridBagConstraints.BOTH;
 		gbc_rdbtnUCTO.insets = new Insets(0, 0, 5, 5);
 		gbc_rdbtnUCTO.gridx = 1;
-		gbc_rdbtnUCTO.gridy = 8;
+		gbc_rdbtnUCTO.gridy = 7;
 		panelAlgorithms.add(rdbtnUCTO, gbc_rdbtnUCTO);
 		
 		JLabel lblRollouts3 = new JLabel("   Rollouts:");
@@ -953,7 +968,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_lblRollouts3.fill = GridBagConstraints.BOTH;
 		gbc_lblRollouts3.insets = new Insets(0, 0, 5, 5);
 		gbc_lblRollouts3.gridx = 2;
-		gbc_lblRollouts3.gridy = 8;
+		gbc_lblRollouts3.gridy = 7;
 		panelAlgorithms.add(lblRollouts3, gbc_lblRollouts3);
 		
 		textFieldUCTO = new JTextField();
@@ -965,7 +980,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_textFieldUCTO.fill = GridBagConstraints.BOTH;
 		gbc_textFieldUCTO.insets = new Insets(0, 0, 5, 5);
 		gbc_textFieldUCTO.gridx = 3;
-		gbc_textFieldUCTO.gridy = 8;
+		gbc_textFieldUCTO.gridy = 7;
 		panelAlgorithms.add(textFieldUCTO, gbc_textFieldUCTO);
 		
 		JLabel label_50 = new JLabel("");
@@ -973,7 +988,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_label_50.fill = GridBagConstraints.BOTH;
 		gbc_label_50.insets = new Insets(0, 0, 5, 5);
 		gbc_label_50.gridx = 4;
-		gbc_label_50.gridy = 8;
+		gbc_label_50.gridy = 7;
 		panelAlgorithms.add(label_50, gbc_label_50);
 		
 		JLabel lblAdditionalRolloutsm = new JLabel("   Additional Rollouts (M):");
@@ -981,7 +996,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_lblAdditionalRolloutsm.fill = GridBagConstraints.BOTH;
 		gbc_lblAdditionalRolloutsm.insets = new Insets(0, 0, 5, 5);
 		gbc_lblAdditionalRolloutsm.gridx = 5;
-		gbc_lblAdditionalRolloutsm.gridy = 8;
+		gbc_lblAdditionalRolloutsm.gridy = 7;
 		panelAlgorithms.add(lblAdditionalRolloutsm, gbc_lblAdditionalRolloutsm);
 		
 		textFieldUCTO_M = new JTextField();
@@ -993,8 +1008,73 @@ public class CtpGui extends CtpAppConstants{
 		gbc_textFieldUCTO_M.fill = GridBagConstraints.BOTH;
 		gbc_textFieldUCTO_M.insets = new Insets(0, 0, 5, 0);
 		gbc_textFieldUCTO_M.gridx = 6;
-		gbc_textFieldUCTO_M.gridy = 8;
+		gbc_textFieldUCTO_M.gridy = 7;
 		panelAlgorithms.add(textFieldUCTO_M, gbc_textFieldUCTO_M);
+		
+		JLabel lblBlindUctuctb = new JLabel("   Optimistic UCT2 (UCTO2)");
+		GridBagConstraints gbc_lblBlindUctuctb = new GridBagConstraints();
+		gbc_lblBlindUctuctb.fill = GridBagConstraints.BOTH;
+		gbc_lblBlindUctuctb.insets = new Insets(0, 0, 5, 5);
+		gbc_lblBlindUctuctb.gridx = 0;
+		gbc_lblBlindUctuctb.gridy = 8;
+		panelAlgorithms.add(lblBlindUctuctb, gbc_lblBlindUctuctb);
+		
+		rdbtnUCTO2 = new JRadioButton("");
+		GridBagConstraints gbc_rdbtnUCTB = new GridBagConstraints();
+		gbc_rdbtnUCTB.fill = GridBagConstraints.BOTH;
+		gbc_rdbtnUCTB.insets = new Insets(0, 0, 5, 5);
+		gbc_rdbtnUCTB.gridx = 1;
+		gbc_rdbtnUCTB.gridy = 8;
+		panelAlgorithms.add(rdbtnUCTO2, gbc_rdbtnUCTB);
+		
+		JLabel lblRollouts2 = new JLabel("   Iterations:");
+		GridBagConstraints gbc_lblRollouts2 = new GridBagConstraints();
+		gbc_lblRollouts2.fill = GridBagConstraints.BOTH;
+		gbc_lblRollouts2.insets = new Insets(0, 0, 5, 5);
+		gbc_lblRollouts2.gridx = 2;
+		gbc_lblRollouts2.gridy = 8;
+		panelAlgorithms.add(lblRollouts2, gbc_lblRollouts2);
+		
+		textFieldUCTO2 = new JTextField();
+		textFieldUCTO2.setToolTipText("Pls enter positive integer value.");
+		textFieldUCTO2.addActionListener(new TextFieldIntegerListener(PropKeys.ROLLOUTS_UCTO2, textFieldUCTO2));
+		textFieldUCTO2.setText(prop.getProperty(PropKeys.ROLLOUTS_UCTO2.name()));
+		textFieldUCTO2.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTB = new GridBagConstraints();
+		gbc_textFieldUCTB.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTB.insets = new Insets(0, 0, 5, 5);
+		gbc_textFieldUCTB.gridx = 3;
+		gbc_textFieldUCTB.gridy = 8;
+		panelAlgorithms.add(textFieldUCTO2, gbc_textFieldUCTB);
+		
+		JLabel label_44 = new JLabel("");
+		GridBagConstraints gbc_label_44 = new GridBagConstraints();
+		gbc_label_44.fill = GridBagConstraints.BOTH;
+		gbc_label_44.insets = new Insets(0, 0, 5, 5);
+		gbc_label_44.gridx = 4;
+		gbc_label_44.gridy = 8;
+		panelAlgorithms.add(label_44, gbc_label_44);
+		
+		JLabel lblRolloutsm = new JLabel("   Rollouts (Nr):");
+		GridBagConstraints gbc_lblRolloutsm = new GridBagConstraints();
+		gbc_lblRolloutsm.anchor = GridBagConstraints.WEST;
+		gbc_lblRolloutsm.fill = GridBagConstraints.VERTICAL;
+		gbc_lblRolloutsm.insets = new Insets(0, 0, 5, 5);
+		gbc_lblRolloutsm.gridx = 5;
+		gbc_lblRolloutsm.gridy = 8;
+		panelAlgorithms.add(lblRolloutsm, gbc_lblRolloutsm);
+		
+		textField_UCTO2_Nr = new JTextField();
+		textField_UCTO2_Nr.addActionListener(new TextFieldIntegerListener(PropKeys.ADDITIONAL_ROLLOUTS_UCTO2, textField_UCTO2_Nr));
+		textField_UCTO2_Nr.setToolTipText("Pls enter positive integer value.");
+		textField_UCTO2_Nr.setText(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTO2.name()));
+		textField_UCTO2_Nr.setColumns(10);
+		GridBagConstraints gbc_textField_UCTO2_Nr = new GridBagConstraints();
+		gbc_textField_UCTO2_Nr.insets = new Insets(0, 0, 5, 0);
+		gbc_textField_UCTO2_Nr.fill = GridBagConstraints.BOTH;
+		gbc_textField_UCTO2_Nr.gridx = 6;
+		gbc_textField_UCTO2_Nr.gridy = 8;
+		panelAlgorithms.add(textField_UCTO2_Nr, gbc_textField_UCTO2_Nr);
 		
 		JLabel lblPruningUctuctp = new JLabel("   Pruning UCT (UCTP)");
 		GridBagConstraints gbc_lblPruningUctuctp = new GridBagConstraints();
@@ -1012,7 +1092,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_rdbtnUCTP.gridy = 9;
 		panelAlgorithms.add(rdbtnUCTP, gbc_rdbtnUCTP);
 		
-		JLabel lblRollouts4 = new JLabel("   Rollouts:");
+		JLabel lblRollouts4 = new JLabel("   Iterations:");
 		GridBagConstraints gbc_lblRollouts4 = new GridBagConstraints();
 		gbc_lblRollouts4.fill = GridBagConstraints.BOTH;
 		gbc_lblRollouts4.insets = new Insets(0, 0, 5, 5);
@@ -1040,7 +1120,7 @@ public class CtpGui extends CtpAppConstants{
 		gbc_label_54.gridy = 9;
 		panelAlgorithms.add(label_54, gbc_label_54);
 		
-		JLabel lbAdditionalRolloutsUCTP = new JLabel("   Additional Rollouts(M):");
+		JLabel lbAdditionalRolloutsUCTP = new JLabel("   Rollouts(Nr):");
 		GridBagConstraints gbc_lbAdditionalRolloutsUCTP = new GridBagConstraints();
 		gbc_lbAdditionalRolloutsUCTP.fill = GridBagConstraints.BOTH;
 		gbc_lbAdditionalRolloutsUCTP.insets = new Insets(0, 0, 5, 5);
@@ -1048,17 +1128,17 @@ public class CtpGui extends CtpAppConstants{
 		gbc_lbAdditionalRolloutsUCTP.gridy = 9;
 		panelAlgorithms.add(lbAdditionalRolloutsUCTP, gbc_lbAdditionalRolloutsUCTP);
 		
-		textFieldUCTP_M = new JTextField();
-		textFieldUCTP_M.setToolTipText("Pls enter positive integer value.");
-		textFieldUCTP_M.addActionListener(new TextFieldIntegerListener(PropKeys.ADDITIONAL_ROLLOUTS_UCTP, textFieldUCTP_M));
-		textFieldUCTP_M.setText(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTP.name()));
-		textFieldUCTP_M.setColumns(10);
-		GridBagConstraints gbc_textFieldUCTP_M = new GridBagConstraints();
-		gbc_textFieldUCTP_M.fill = GridBagConstraints.BOTH;
-		gbc_textFieldUCTP_M.insets = new Insets(0, 0, 5, 0);
-		gbc_textFieldUCTP_M.gridx = 6;
-		gbc_textFieldUCTP_M.gridy = 9;
-		panelAlgorithms.add(textFieldUCTP_M, gbc_textFieldUCTP_M);
+		textFieldUCTP_Nr = new JTextField();
+		textFieldUCTP_Nr.setToolTipText("Pls enter positive integer value.");
+		textFieldUCTP_Nr.addActionListener(new TextFieldIntegerListener(PropKeys.ADDITIONAL_ROLLOUTS_UCTP, textFieldUCTP_Nr));
+		textFieldUCTP_Nr.setText(prop.getProperty(PropKeys.ADDITIONAL_ROLLOUTS_UCTP.name()));
+		textFieldUCTP_Nr.setColumns(10);
+		GridBagConstraints gbc_textFieldUCTP_Nr = new GridBagConstraints();
+		gbc_textFieldUCTP_Nr.fill = GridBagConstraints.BOTH;
+		gbc_textFieldUCTP_Nr.insets = new Insets(0, 0, 5, 0);
+		gbc_textFieldUCTP_Nr.gridx = 6;
+		gbc_textFieldUCTP_Nr.gridy = 9;
+		panelAlgorithms.add(textFieldUCTP_Nr, gbc_textFieldUCTP_Nr);
 		
 		JButton btnSelectAll = new JButton("All");
 		btnSelectAll.addActionListener(new ActionListener(){
@@ -1357,7 +1437,7 @@ public class CtpGui extends CtpAppConstants{
 		rdbtnCA.setSelected(b);
 		rdbtnHOP.setSelected(b);
 		rdbtnORO.setSelected(b);
-		rdbtnUCTB.setSelected(b);
+		rdbtnUCTO2.setSelected(b);
 		rdbtnUCTO.setSelected(b);
 		rdbtnUCTP.setSelected(b);
 	}

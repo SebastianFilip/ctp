@@ -1,11 +1,11 @@
 package cz.vut.sf.algorithms;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import cz.vut.sf.ctp.AbstractMonteCarloTreeSearchNew;
 import cz.vut.sf.ctp.Agent;
 import cz.vut.sf.ctp.DefaultCtp;
 import cz.vut.sf.ctp.VtxDTO;
@@ -14,14 +14,21 @@ import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
 
-public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSearchNew implements UctAlgorithm{
+public abstract class AbstractUctDepthAlgorithm extends AbstractTreeSearchDepth implements UctAlgorithm{
+	public AbstractUctDepthAlgorithm(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
 	protected int numberOfAdditionalRollouts = 1;
-	protected int numberOfRollouts = 1000;
+	protected int numberOfIterations = 1000;
+	protected long timeToDecision = 0;
+	private int iterationsMade = 0;
 	private Set<Vertex> expandedHistory = new HashSet<Vertex>(); 
+	protected OptimisticUctFormula uctFormula = new OptimisticUctFormula(this.graph, this.root);
 	
-	public Result solve(DefaultCtp ctp, Agent agent){
+	@Override
+	public Result solve(){
 		int blockedEdgesRevealed = 0;
-		
+		this.setGraph(ctp.g);
 		while(agent.getCurrentVertex()!=ctp.t){
 			//If graph changes all of the children of current vertex should be expanded (explored)
 			boolean isGraphChanged = false;
@@ -30,11 +37,15 @@ public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSear
 			if(blockedEdgesRevealed != ctp.g.getBlockedEdgesRevealed()){
 				blockedEdgesRevealed = ctp.g.getBlockedEdgesRevealed();
 				isGraphChanged = true;
-				expandedHistory = new HashSet<Vertex>(); 
+				expandedHistory = new HashSet<Vertex>();
+				uctFormula.setGraph(ctp.g);
+				this.setGraph(ctp.g);
+				uctFormula.clearCachedData();
 			}
 			
 			this.setRoot(agent.getCurrentVertex());
-			this.setGraph(ctp.g);
+			uctFormula.setRoot(root);
+			
 			if(this.getRoot().isLeafNode()){
 				LOG.debug("Expanding root = "+ this.getRoot().getData().vtx +", except for parent = " + agent.getPreviousVertex(isGraphChanged));
 				this.expandNode(this.getRoot(), agent.getPreviousVertex(isGraphChanged));
@@ -55,16 +66,21 @@ public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSear
 				agent.traverseToAdjancetVtx(ctp.g, this.getRoot().getChildren().get(0).getData().vtx);
 				continue;
 			}
-			
-			this.doSearch(numberOfRollouts);
+			if(getTimeToDecision() == 0){
+				iterationsMade += this.doSearch(numberOfIterations);
+			}else{
+				iterationsMade += this.doSearch(numberOfIterations, getTimeToDecision());
+			}
+//			LOG.setLevel(org.apache.log4j.Level.DEBUG);
 			Vertex chosenVtx = this.getBestAction(root.getChildren());
+//			LOG.setLevel(org.apache.log4j.Level.INFO);
 			expandedHistory.add(agent.getCurrentVertex());
 			agent.traverseToAdjancetVtx(ctp.g, chosenVtx);
 			if(LOG.isDebugEnabled()){
 				LOG.debug("Chosen vtx = " + chosenVtx);
 			}
 		}
-		return new Result(agent, "Rollout Based Algorithm");
+		return new Result(agent, "Rollout Based Algorithm", iterationsMade/(agent.getTraversalHistory().size()-1));
 	}
 	
 	protected Vertex getBestAction(){
@@ -117,6 +133,12 @@ public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSear
 	    		i.remove();
 	    	}
 		}
+		if(result == null){
+			return null;
+		}
+		if(result.equals(graph.getTerminalVtx())){
+			return result;
+		}
 		if(expandedHistory.contains(result)){
 			if(nodesList.isEmpty()){
 				return result;
@@ -133,9 +155,7 @@ public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSear
 			}
 			return getBestAction(nodesList);
 		}
-		if(result == null){
-			return null;
-		}
+
 		return result;
 	}
 	
@@ -152,7 +172,12 @@ public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSear
 				return children.get(unexploredIndexes.get(0));
 			}
 			int chosenIndex = findFromUnexplored(children, unexploredIndexes);
-			return children.get(chosenIndex);
+			try{
+				return children.get(unexploredIndexes.get(chosenIndex));
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			
 		}
 		double maxUctValue = -1*Double.MAX_VALUE;
 		int maxValueIndex = -1;
@@ -179,7 +204,16 @@ public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSear
 		return 0;
 	}
 	
-	protected abstract List<Integer> getUnexploredChildrenIndexes(List<TreeNode<VtxDTO>> children, Set<Vertex> forbiddenList);
+	protected List<Integer> getUnexploredChildrenIndexes(List<TreeNode<VtxDTO>> children, Set<Vertex> forbiddenList) {
+		List<Integer> result = new ArrayList<Integer>();
+		for (int i = 0; i < children.size(); i++) {
+			if (children.get(i).getData().visitsMade == 0 && !forbiddenList.contains(children.get(i).getData().vtx)){
+				Integer temp = new Integer(i);
+				result.add(temp);
+			}
+		}
+		return result.isEmpty() ? null : result;
+	}
 	
 	protected abstract double evaluateUctFormula(TreeNode<VtxDTO> node);
 	
@@ -187,15 +221,22 @@ public abstract class AbstractUctAlgorithmNew extends AbstractMonteCarloTreeSear
 		return numberOfAdditionalRollouts;
 	}
 
-	public int getNumberOfRollouts() {
-		return numberOfRollouts;
+	public int getNumberOfIterations() {
+		return numberOfIterations;
 	}
 
 	public void setNumberOfAdditionalRollouts(int n) {
 		this.numberOfAdditionalRollouts = n;
 	}
 
-	public void setNumberOfRollouts(int i) {
-		this.numberOfRollouts = i;
+	public void setNumberOfIterations(int i) {
+		this.numberOfIterations = i;
+	}
+	
+	public void setTimeToDecision(long miliseconds){
+		timeToDecision = miliseconds;
+	}
+	public long getTimeToDecision(){
+		return timeToDecision;
 	}
 }

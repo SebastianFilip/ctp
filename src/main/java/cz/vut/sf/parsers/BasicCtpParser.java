@@ -66,10 +66,18 @@ public class BasicCtpParser implements DefaultParser {
 	}
 
 	private void processSections(BufferedReader br) throws IOException {
+//		List<List<Integer>> opositeEdges = new ArrayList<List<Integer>>();
+//		boolean isDirected = false;
+		
 		String line = br.readLine();
 		while(KeyWords.EOF != getKeyWordValue(line)){
 			//when implementing file info need to split line
-			currentSection = getKeyWordValue(line);
+			if(line.contains(":")){
+				String keyword = line.split(":")[0].replaceAll(" ", "");
+				currentSection = getKeyWordValue(keyword);	
+			}else{
+				currentSection = getKeyWordValue(line);	
+			}
 			
 			switch (currentSection){
 			case NODE_COORD_SECTION:
@@ -118,6 +126,14 @@ public class BasicCtpParser implements DefaultParser {
 				List<Double> weightRow = getDoubleRow(line.split(" "));
 				weightsList.add(weightRow);
 				break;
+			case GRAPH:
+				if(!line.contains("UNDIRECTED")){
+					// directed graph must be transformed to undirected
+//					isDirected = true;
+				}
+				lineNumber++;
+				line = br.readLine();
+				break;
 			default:
 				line = br.readLine();
 				lineNumber++;
@@ -156,9 +172,9 @@ public class BasicCtpParser implements DefaultParser {
 	}
 
 	public static enum KeyWords{
-		NAME, COMMENT, TYPE, GRAPH, DIRECTED, UNDIRECTED, PROBABILITY_COUNT, 
-		DIMENSION, EDGE_WEIGHT_TYPE, EUC_2D, NODE_COORD_SECTION, EDGE_DIRECTIONS_SECTION,
-		PROBABILITY_SECTION, PENALTY_SECTION, EOF, DEFAULT, EDGE_WEIGHT_SECTION;
+		NODE_COORD_SECTION, EDGE_DIRECTIONS_SECTION,
+		PROBABILITY_SECTION, PENALTY_SECTION, EOF, NAME, COMMENT, TYPE, GRAPH, DIRECTED, UNDIRECTED, PROBABILITY_COUNT, 
+		DIMENSION, EDGE_WEIGHT_TYPE, EUC_2D, DEFAULT, EDGE_WEIGHT_SECTION;
 	}
 	
 	private class NodeCoord{

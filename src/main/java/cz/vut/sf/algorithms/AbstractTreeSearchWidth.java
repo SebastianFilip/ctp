@@ -1,4 +1,4 @@
-package cz.vut.sf.ctp;
+package cz.vut.sf.algorithms;
 
 import java.util.Set;
 
@@ -6,11 +6,16 @@ import cz.vut.sf.graph.CtpException;
 import cz.vut.sf.graph.StochasticWeightedGraph;
 import cz.vut.sf.graph.TreeNode;
 import cz.vut.sf.graph.Vertex;
-import cz.vut.sf.gui.LoggerClass;
-import cz.vut.sf.algorithms.SimulateAble;
+import cz.vut.sf.ctp.Agent;
+import cz.vut.sf.ctp.DefaultCtp;
+import cz.vut.sf.ctp.Simulator;
 import cz.vut.sf.ctp.VtxDTO;
 
-public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implements SimulateAble{
+public abstract class AbstractTreeSearchWidth extends DefaultCtpAlgorithm implements SimulateAble{
+	public AbstractTreeSearchWidth(DefaultCtp ctp, Agent agent) {
+		super(ctp, agent);
+	}
+
 	protected StochasticWeightedGraph graph;
 	protected TreeNode<VtxDTO> root;
 
@@ -62,10 +67,21 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 			LOG.debug("back propagation for "+ sb.toString() + " = " + propagatedValue/totalVisitsOfExplored);
 		}
 	}
-		
-	public void doSearch(final int numberOfIteration, final int numberOfRollouts){
+	
+	public int doSearch(final int numberOfIterations, final int numberOfRollouts){
+		return doSearch(numberOfIterations, numberOfRollouts, 120000);
+	}	
+	
+	public int doSearch(final int numberOfIteration, final int numberOfRollouts, final long timeToDecision){
+		long startingTime = (long) (System.nanoTime()/1E6);
+		int iterationsMade = 0;
 		Simulator rolloutData = null;
 		for(int i=0; i < numberOfIteration; i++){
+			iterationsMade++;
+			long timeMakingDecision = (long) (System.nanoTime()/1E6) - startingTime;
+			if(timeMakingDecision > timeToDecision){
+				return iterationsMade;
+			}
 			TreeNode<VtxDTO> currentNode = root;
 			//pick node to explore
 			while(!currentNode.isLeafNode()){
@@ -95,6 +111,7 @@ public abstract class AbstractMonteCarloTreeSearch extends LoggerClass implement
 				backPropagation(currentNode, rolloutData);
 			}
 		}
+		return iterationsMade;
 	}
 	
 	protected boolean checkTerminalNode(TreeNode<VtxDTO> node) {
