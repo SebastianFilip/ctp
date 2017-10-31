@@ -37,13 +37,19 @@ public class CtpRunner extends CtpAppConstants {
     static Graph<String, DefaultEdge> completeGraph;
     
     public static void run(List<AlgNames> algorithmsToBeMade, int numberOfRuns){
-    	ParsedDTO graphData = new BasicCtpParser().parseFile(prop.getProperty(PropKeys.SOURCE_FILE.name()));
+    	ParsedDTO graphData = null;
+    	try{
+    		graphData = new BasicCtpParser().parseFile(prop.getProperty(PropKeys.SOURCE_FILE.name()));
+    	}catch(Exception e){
+    		LOG.info("Parsing graph data failed!");
+    		LOG.info(e.getClass().getName() + e.getMessage());
+    		return; 
+    	}
+    	 
     	//Instantiate CTP
     	StochasticWeightedGraph g;
     	g = new StochasticWeightedGraph(StochasticWeightedEdge.class, graphData);
-    	if(LOG.isDebugEnabled()){
-    		LOG.debug("Out of 1000 times this graph was generated " + GraphChecker.countFailedRollouts(graphData, 1000) + " time(s) not connected");
-    	}
+    	LOG.info("Out of 1000 times this graph was generated " + GraphChecker.countFailedRollouts(graphData, 1000) + " time(s) not connected");
     	Vertex s = g.getSourceVtx();
     	Vertex t = g.getTerminalVtx();
     	DefaultCtp ctp = new DefaultCtp(g, s, t);
@@ -78,6 +84,10 @@ public class CtpRunner extends CtpAppConstants {
 				return results;
 			}
     		if(stop){
+    			if(runResult.size() == algorithms.size()){
+    	    		runsMade++;
+    	    		ctpResults.addAll(runResult);
+    			}
     			return results;
     		}
     		ctpResults = results;

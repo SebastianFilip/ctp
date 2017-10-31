@@ -1318,9 +1318,13 @@ public class CtpGui extends CtpAppConstants{
 			public void actionPerformed(ActionEvent e) {
 				stop = false;
 	        	try{
-	        		textAreaConsole.setText(null);
-	        		LabelSwingWorker workerThread = new LabelSwingWorker(lblStatus);
-					workerThread.execute();
+	        		if(lblStatus.getText().contains("idle")){
+	        			textAreaConsole.setText(null);
+		        		LabelSwingWorker workerThread = new LabelSwingWorker(lblStatus);
+						workerThread.execute();
+	        		}else{
+	        			LOG.info("There is already run in progress!");
+	        		}
 	        	}catch(Exception err){
 	        		LOG.error(err);
 	        	}
@@ -1347,6 +1351,9 @@ public class CtpGui extends CtpAppConstants{
 				LOG.info(logMsg);
 				LOG.info(logMsgSeparator);
 				stop = true;
+				lblStatus.setText("Status: stopping in progress");
+	    		ResultsTable.initTable();
+	    		table = new JTable(ResultsTable.model);
 			}
 		});
 		btnStop.setForeground(new Color(255, 0, 0));
@@ -1358,7 +1365,6 @@ public class CtpGui extends CtpAppConstants{
 					.addContainerGap()
 					.addGroup(gl_panelStart.createParallelGroup(Alignment.LEADING)
 						.addComponent(scrollConsole, GroupLayout.DEFAULT_SIZE, 759, Short.MAX_VALUE)
-						.addComponent(lblStatus, GroupLayout.PREFERRED_SIZE, 92, GroupLayout.PREFERRED_SIZE)
 						.addGroup(gl_panelStart.createSequentialGroup()
 							.addComponent(lblNewLabel)
 							.addPreferredGap(ComponentPlacement.RELATED)
@@ -1373,7 +1379,8 @@ public class CtpGui extends CtpAppConstants{
 							.addPreferredGap(ComponentPlacement.RELATED)
 							.addComponent(btnStop, GroupLayout.PREFERRED_SIZE, 63, GroupLayout.PREFERRED_SIZE)
 							.addGap(160)
-							.addComponent(lblNewLabel_1, GroupLayout.PREFERRED_SIZE, 111, GroupLayout.PREFERRED_SIZE)))
+							.addComponent(lblNewLabel_1, GroupLayout.PREFERRED_SIZE, 111, GroupLayout.PREFERRED_SIZE))
+						.addComponent(lblStatus, GroupLayout.PREFERRED_SIZE, 206, GroupLayout.PREFERRED_SIZE))
 					.addContainerGap())
 		);
 		gl_panelStart.setVerticalGroup(

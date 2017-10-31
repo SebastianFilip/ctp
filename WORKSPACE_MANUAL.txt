@@ -1,0 +1,19 @@
+In order to get workspace ready, theese steps have to be done.
+1. clone git repository to your local machine
+	- open gitbash
+	- navigate to the directory you want project to be cloned in
+	- $git clone https://github.com/SebastianFilip/ctp
+
+2. open Java IDE (e.g. Eclipse, IDEA) - next steps may be different based on used IDE (Im using Eclipse Oxygen)
+	- select File/Import/Maven/Existing Maven Project and navigate to root directory of ctp (same as git clone directory)
+	you should see that pom.xml file is present in Projects window, click Finish. After that dependencies are going to be downloaded to 	your project. Make sure you have maven configured. (On Windows OS that means you have configured MVN_HOME variable with path to 		apache-maven-version and added to system path %MVN_HOME%/bin)
+
+3. run main class CtpGui.java which is in package cz.vut.sf.gui
+	you should make sure your IDE is configured tu run Java code (have JDK as Installed JRE's, have JRE on project's build path)
+
+4. if you want to build one executable jar file with all dependencies you can navigate to root directory in command window and run
+	mvn package
+   this will start maven build, jar file is then located in ctp/target location
+
+5. I wish you all the best and happy coding :)
+	  
